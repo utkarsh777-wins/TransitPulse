@@ -1,0 +1,201 @@
+{
+  "dataset": "NH-44 Phase 1 Transit Telemetry",
+  "generated_at": "2026-10-28T10:54:07.438663+00:00",
+  "corridor_bounds": {
+    "lat": [
+      31.2,
+      31.35
+    ],
+    "lon": [
+      75.55,
+      75.8
+    ]
+  },
+  "valid_speed_bounds_kmh": [
+    2.0,
+    95.0
+  ],
+  "summary": {
+    "raw_records": 4800,
+    "geofence_dropped": 57,
+    "speed_dropped": 48,
+    "dwell_imputed": 48,
+    "duplicates_dropped": 0,
+    "clean_records": 4695,
+    "retention_rate_pct": 97.81
+  },
+  "gates": [
+    {
+      "id": "geofence",
+      "name": "Corridor Geofence Bounding Box",
+      "description": "Rejects GPS pings outside the NH-44 corridor bounding box.",
+      "input_records": 4800,
+      "dropped_records": 57,
+      "output_records": 4743,
+      "status": "passed"
+    },
+    {
+      "id": "speed",
+      "name": "Speed Sanity Filter",
+      "description": "Removes telemetry below 2 km/h or above 95 km/h.",
+      "input_records": 4743,
+      "dropped_records": 48,
+      "output_records": 4695,
+      "status": "passed"
+    },
+    {
+      "id": "dwell",
+      "name": "Missing Dwell Imputation",
+      "description": "Median-imputes dwell packets by segment and peak state.",
+      "input_records": 4695,
+      "dropped_records": 0,
+      "imputed_records": 48,
+      "output_records": 4695,
+      "status": "passed"
+    },
+    {
+      "id": "duplicates",
+      "name": "Duplicate Ping Removal",
+      "description": "Drops duplicate trip/segment telemetry and sorts timestamps.",
+      "input_records": 4695,
+      "dropped_records": 0,
+      "output_records": 4695,
+      "status": "passed"
+    }
+  ],
+  "cleaning_funnel": [
+    {
+      "stage": "Raw GPS Telemetry",
+      "records": 4800,
+      "delta": 0
+    },
+    {
+      "stage": "Geofence Filter",
+      "records": 4743,
+      "delta": -57
+    },
+    {
+      "stage": "Speed Sanity Filter",
+      "records": 4695,
+      "delta": -48
+    },
+    {
+      "stage": "Dwell Imputation",
+      "records": 4695,
+      "delta": 0,
+      "imputed": 48
+    },
+    {
+      "stage": "Duplicate Removal",
+      "records": 4695,
+      "delta": 0
+    }
+  ],
+  "validation": {
+    "expected_counts": {
+      "raw_records": 4800,
+      "geofence_dropped": 57,
+      "speed_dropped": 48,
+      "dwell_imputed": 48,
+      "clean_records": 4695,
+      "retention_rate_pct": 97.81
+    },
+    "observed_counts": {
+      "raw_records": 4800,
+      "geofence_dropped": 57,
+      "speed_dropped": 48,
+      "dwell_imputed": 48,
+      "clean_records": 4695,
+      "retention_rate_pct": 97.81
+    },
+    "mismatches": {},
+    "passed": true,
+    "feature_nulls": 0
+  },
+  "verification": {
+    "passed": true,
+    "feature_schema": [
+      "hour_of_day",
+      "day_of_week",
+      "is_weekend",
+      "is_peak_hour",
+      "segment_id",
+      "segment_distance_km",
+      "scheduled_time_min",
+      "historical_segment_avg_min",
+      "rolling_3trip_delay_min",
+      "prev_stop_dwell_sec",
+      "weather_severity",
+      "gps_speed_kmh"
+    ],
+    "feature_checks": {
+      "regressor": true,
+      "classifier": true,
+      "quantile_lower": true,
+      "quantile_upper": true
+    },
+    "classifier_classes": [
+      0,
+      1,
+      2
+    ],
+    "classifier_accuracy": 0.891,
+    "smoke_test": {
+      "predicted_delay_min": 1.1499,
+      "lower_bound_min": 0.5588,
+      "upper_bound_min": 1.486,
+      "delay_status": "On-Time"
+    },
+    "artifact_inventory": [
+      {
+        "name": "regressor",
+        "file": "delay_regressor.joblib",
+        "size_bytes": 17418401,
+        "sha256": "c3c60106c71ef1164349fa0e54949b5b025c15f7b7963d04c8264461c55d77a4",
+        "exists": true
+      },
+      {
+        "name": "classifier",
+        "file": "delay_classifier.joblib",
+        "size_bytes": 4381825,
+        "sha256": "a73733423565abd915a1c25e5e5281b3de9942f7349448df3d1d63b9eaf24ef0",
+        "exists": true
+      },
+      {
+        "name": "quantile_lower",
+        "file": "quantile_lower_10.joblib",
+        "size_bytes": 134520,
+        "sha256": "585c294095a3cdd37ef81cedf60c3281f3ea3d3b88fe4e5851e80633ad9db0e7",
+        "exists": true
+      },
+      {
+        "name": "quantile_upper",
+        "file": "quantile_upper_90.joblib",
+        "size_bytes": 140296,
+        "sha256": "2cbc72991bbc66db4ad700d377f88ec607e651c96fa10cc986e61f3ba13a0dff",
+        "exists": true
+      },
+      {
+        "name": "metadata",
+        "file": "model_metadata.json",
+        "size_bytes": 909,
+        "sha256": "17e90faf4ce7171927061c03c3242ab43c522602a59f8824870c7796e3e2a064",
+        "exists": true
+      }
+    ]
+  },
+  "model_metrics": {
+    "reg_mae": 0.627,
+    "reg_rmse": 0.914,
+    "reg_r2": 0.945,
+    "baseline_mae": 3.498,
+    "error_reduction_pct": 82.07,
+    "clf_accuracy": 0.891,
+    "clf_macro_f1": 0.893
+  },
+  "uncertainty": {
+    "off_peak_interval_width": 1.095,
+    "peak_hour_interval_width": 3.491
+  },
+  "passed": true
+}
