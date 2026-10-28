@@ -1,0 +1,29 @@
+{
+  "metrics": {
+    "reg_mae": 0.627,
+    "reg_rmse": 0.914,
+    "reg_r2": 0.945,
+    "baseline_mae": 3.498,
+    "error_reduction_pct": 82.07,
+    "clf_accuracy": 0.891,
+    "clf_macro_f1": 0.893
+  },
+  "uncertainty": {
+    "off_peak_interval_width": 1.095,
+    "peak_hour_interval_width": 3.491
+  },
+  "feature_importances": {
+    "rolling_3trip_delay_min": 0.6034737214386138,
+    "is_peak_hour": 0.23352836296600005,
+    "weather_severity": 0.06060327892409148,
+    "segment_id": 0.038819001549079496,
+    "gps_speed_kmh": 0.036703837333861684,
+    "prev_stop_dwell_sec": 0.011678022885340644,
+    "hour_of_day": 0.0037425858493520836,
+    "day_of_week": 0.003518255589928898,
+    "segment_distance_km": 0.002521890256357972,
+    "historical_segment_avg_min": 0.0025016106634044785,
+    "scheduled_time_min": 0.0024294501777665225,
+    "is_weekend": 0.0004799823662029715
+  }
+}
