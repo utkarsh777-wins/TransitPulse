@@ -225,20 +225,52 @@ def confidence_from_width(width: float, peak: bool) -> float:
     return round(clamp(confidence, 35.0, 96.0), 1)
 
 
-def rider_recommendation(status: str, peak: bool, weather: int, lower: float, upper: float) -> str:
+def status_from_delay(delay_min: float) -> str:
+    """Public status rule: status always follows the point delay, never the classifier."""
+    if delay_min < 2.0:
+        return "On-Time"
+    if delay_min <= 6.0:
+        return "Moderate Delay"
+    return "Severe Delay"
+
+
+def rider_recommendation(
+    status: str,
+    peak: bool,
+    weather: int,
+    lower: float,
+    upper: float,
+    is_low_confidence: bool,
+) -> str:
+    window = f"{lower:+.1f} to {upper:+.1f} min"
     if status == "Severe Delay":
-        return "Allow 15+ extra minutes or board the next service. Live arrival window is widening."
-    if status == "Moderate Delay":
-        if weather > 0:
-            return "Carry buffer time and monitor the live window; wet-weather boarding is slowing the corridor."
-        if peak:
-            return "Prefer the next departure if connecting; peak demand is extending the arrival window."
-        return "Service is running slightly behind schedule. The current arrival window remains usable."
-    if weather > 0:
-        return "Bus is close to schedule. Keep a small weather buffer for the final approach."
-    if peak:
-        return "Board now; the bus is tracking within the on-time band despite peak volumes."
-    return f"On-time service. Predicted arrival window is {lower:+.1f} to {upper:+.1f} minutes."
+        guidance = (
+            f"Severe delay expected: the arrival window is {window}. "
+            "Allow at least 15-20 extra minutes, or take the next service if your connection is tight."
+        )
+    elif status == "Moderate Delay":
+        guidance = (
+            f"Moderate delay expected: the arrival window is {window}. "
+            "Keep 8-12 minutes of buffer and recheck the live ETA before leaving."
+        )
+    elif is_low_confidence:
+        guidance = (
+            "Service is currently inside the expected on-schedule band, but confidence is limited. "
+            f"The arrival window is {window}; keep 5-10 minutes of buffer and recheck before leaving."
+        )
+    else:
+        guidance = (
+            f"Service is tracking on schedule with a stable arrival window of {window}. "
+            "No extra buffer is required; keep monitoring live updates."
+        )
+
+    if weather >= 2:
+        guidance += " Heavy downpour is active, so add 10-15 minutes for slower boarding and reduced visibility."
+    elif weather == 1:
+        guidance += " Light rain or fog may slow boarding, so add 5-8 minutes to your buffer."
+    if peak and status != "Severe Delay":
+        guidance += " Peak-hour traffic is widening the prediction window, so leave earlier than usual."
+    return guidance
 
 
 def segment_inference(models: dict[str, Any], request: SimulationRequest) -> dict[str, Any]:
@@ -282,29 +314,38 @@ def segment_inference(models: dict[str, Any], request: SimulationRequest) -> dic
     cumulative_delay = 0.0
     cumulative_scheduled = 0.0
     total_confidence_weight = 0.0
-    worst_status_index = 0
 
     for index, segment in enumerate(SEGMENTS):
-        predicted = predictions["regression"][index]
+        point_delay = round(predictions["regression"][index], 2)
         raw_lower = predictions["lower"][index]
         raw_upper = predictions["upper"][index]
-        lower = min(raw_lower, predicted)
-        upper = max(raw_upper, predicted)
+
+        # Center the 80% interval on the point prediction so the public ETA and
+        # its uncertainty band can never contradict each other. Peak-hour
+        # intervals are deliberately widened by 35% (Objective 3).
+        half_spread = max(0.6, (raw_upper - raw_lower) / 2.0) * (1.35 if peak else 1.0)
+        lower = round(max(-1.0, point_delay - half_spread), 1)
+        upper = round(point_delay + half_spread, 1)
+
         width = round(max(upper - lower, 0.1), 3)
         confidence = confidence_from_width(width, peak)
         low_confidence = peak or confidence < 70.0
-        status_index = predictions["classifier"][index]
-        status = DELAY_LABELS[status_index]
-        worst_status_index = max(worst_status_index, status_index)
-        probability = predictions["probabilities"][index][status_index]
-        segment_speed = segment["distance_km"] / max((segment["scheduled_time_min"] + max(predicted, 0.0)) / 60.0, 0.1)
+
+        # The classifier stays available as diagnostic evidence, but the public
+        # status is derived strictly from the point delay thresholds.
+        classifier_index = predictions["classifier"][index]
+        classifier_status = DELAY_LABELS[classifier_index]
+        classifier_probability = predictions["probabilities"][index][classifier_index]
+        status = status_from_delay(point_delay)
+        probability = predictions["probabilities"][index][DELAY_LABELS.index(status)]
+        segment_speed = segment["distance_km"] / max((segment["scheduled_time_min"] + max(point_delay, 0.0)) / 60.0, 0.1)
         simulated_speed = round(clamp(0.65 * request.gps_speed_kmh + 0.35 * segment_speed, 5.0, 85.0), 1)
 
         baseline = neutral_predictions[index]
         lag_delta = lag_predictions[index] - baseline
         peak_delta = peak_predictions[index] - lag_predictions[index]
         weather_delta = weather_predictions[index] - peak_predictions[index]
-        dwell_delta = predicted - weather_predictions[index]
+        dwell_delta = point_delay - weather_predictions[index]
 
         xai_drivers = [
             {
@@ -333,23 +374,35 @@ def segment_inference(models: dict[str, Any], request: SimulationRequest) -> dic
             },
         ]
 
-        cumulative_delay += predicted
+        cumulative_delay += point_delay
         segment_payload = {
             **build_segment_record(segment),
-            "predicted_delay_min": round(predicted, 2),
-            "lower_bound_min": round(lower, 2),
-            "upper_bound_min": round(upper, 2),
+            "predicted_delay_min": point_delay,
+            "lower_bound_min": lower,
+            "upper_bound_min": upper,
             "interval_width_min": width,
             "delay_status": status,
             "status_color": STATUS_COLORS[status],
+            "status_rule": "<2.0 On-Time | 2.0-6.0 Moderate | >6.0 Severe",
             "status_probability_pct": round(probability * 100.0, 1),
+            "classifier_status": classifier_status,
+            "classifier_probability_pct": round(classifier_probability * 100.0, 1),
+            "classifier_agrees": classifier_status == status,
             "is_peak_hour": peak,
             "confidence_pct": confidence,
             "is_low_confidence": low_confidence,
+            "rider_recommendation": rider_recommendation(
+                status,
+                peak,
+                request.weather_severity,
+                lower,
+                upper,
+                low_confidence,
+            ),
             "xai_drivers": xai_drivers,
             "xai_baseline_min": round(baseline, 2),
             "simulated_speed_kmh": simulated_speed,
-            "estimated_segment_time_min": round(segment["scheduled_time_min"] + max(predicted, 0.0), 2),
+            "estimated_segment_time_min": round(segment["scheduled_time_min"] + max(point_delay, 0.0), 2),
             "scheduled_start_offset_min": round(cumulative_scheduled, 2),
             "cumulative_delay_min": round(cumulative_delay, 2),
         }
@@ -361,7 +414,8 @@ def segment_inference(models: dict[str, Any], request: SimulationRequest) -> dic
 
     corridor_confidence = round(total_confidence_weight / CORRIDOR_SCHEDULED_MIN, 1)
     total_delay = round(sum(item["predicted_delay_min"] for item in segments_payload), 2)
-    overall_status = DELAY_LABELS[worst_status_index]
+    overall_status = status_from_delay(total_delay)
+    corridor_low_confidence = peak or corridor_confidence < 70.0
     low_confidence_count = sum(1 for item in segments_payload if item["is_low_confidence"])
 
     stops_payload = []
@@ -409,14 +463,16 @@ def segment_inference(models: dict[str, Any], request: SimulationRequest) -> dic
             "delay_status": overall_status,
             "status_color": STATUS_COLORS[overall_status],
             "confidence_pct": corridor_confidence,
-            "is_low_confidence": peak or corridor_confidence < 70.0,
+            "is_low_confidence": corridor_low_confidence,
             "low_confidence_segments": low_confidence_count,
+            "status_rule": "<2.0 On-Time | 2.0-6.0 Moderate | >6.0 Severe",
             "rider_recommendation": rider_recommendation(
                 overall_status,
                 peak,
                 request.weather_severity,
                 min(item["lower_bound_min"] for item in segments_payload),
                 max(item["upper_bound_min"] for item in segments_payload),
+                corridor_low_confidence,
             ),
         },
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -475,10 +531,19 @@ def diagnostics() -> dict[str, Any]:
         "verification": audit.get("verification", {}),
         "plots": [
             {
+                "phase": 1,
                 "name": "Phase 1 Pipeline Diagnostics",
+                "objective": "Objective 1 Evidence",
                 "url": "/assets/phase1_pipeline_diagnostics.png",
                 "caption": "Data-quality gates, corridor telemetry distributions, and cleaning funnel.",
-            }
+            },
+            {
+                "phase": 2,
+                "name": "Phase 2 Model Evaluation",
+                "objective": "Objective 2 Time-Series Tracking, Confusion Matrix & XAI Evidence",
+                "url": "/assets/phase2_model_evaluation.png",
+                "caption": "Held-out time-series tracking, delay-class confusion matrix, and global feature attribution.",
+            },
         ],
         "runtime": {
             "status": "online",

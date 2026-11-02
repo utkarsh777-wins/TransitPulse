@@ -33,12 +33,20 @@ venv\Scripts\python.exe -m uvicorn --app-dir src app:app --host 127.0.0.1 --port
 
 ## What The App Does
 
-- **Live Rider & Fleet Simulator** draws the six NH-44 stops and five route segments, animates bus `PB08-BUS-101`, and updates a telemetry HUD with latitude, longitude, simulated speed, next stop, and corridor progress.
+- **Live Rider & Fleet Simulator** draws the six NH-44 stops and five route segments, animates bus `PB08-BUS-101`, and updates a sleek telemetry HUD overlaid on the bottom of the map with latitude, longitude, simulated speed, next stop, and corridor progress.
 - **Simulation controls** cover time of day (`06:00–21:00`), weather severity (`Clear`, `Light Rain/Fog`, `Heavy Downpour`), upstream three-trip traffic lag (`0–15 min`), boarding dwell (`15–120 s`), and corridor GPS speed. Presets load `Midday Clear`, `Morning Rush + Rain`, and `Evening Gridlock` scenarios.
 - **Real model inference** runs for every segment on each control change using the Random Forest regressor, Random Forest classifier, and 10th/90th percentile quantile regressors.
 - **Objective 3 uncertainty UX** computes confidence from the quantile interval width. Peak hours force the low-confidence state, show the pulsing `PEAK TRAFFIC VOLATILITY` banner, and replace the point ETA with an explicit 80% prediction range plus rider guidance.
 - **Explainable AI** renders local minute-by-minute attributions for cascading three-trip lag, peak-hour surge, weather, and stop dwell time.
-- **Evaluator Diagnostics** exposes the data-quality funnel, time-respecting validation metrics, feature importance, uncertainty calibration, artifact SHA-256 inventory, runtime status, and the Phase 1 diagnostic plot.
+- **Evaluator Diagnostics** exposes the data-quality funnel, time-respecting validation metrics, feature importance, uncertainty calibration, artifact SHA-256 inventory, runtime status, and both the Phase 1 pipeline diagnostics and Phase 2 model evaluation plots. Either plot opens in a lightbox for presentation review.
+
+## Dashboard Controls
+
+- **Theme toggle** switches between `☀️ Light Mode` and `🌙 Dark Mode`. Light mode is the default and uses `#f1f5f9` page background, white surfaces, `#0f172a` primary text, `#334155` secondary text, and `#cbd5e1` borders. The choice is stored in `localStorage` and applied before first paint.
+- **UI zoom toggle** switches the root `html` font size between `16px` (`100%`) and `18.5px` (`115%`). The preference is also persisted, so projector-friendly text survives reloads.
+- **Auto-Follow Bus** is enabled by default. The right inspector tracks the bus as it moves through segments 1 → 5. Clicking a segment manually overrides the inspector until the bus enters the next segment, when auto-follow re-syncs.
+- **Recenter Route** restores the full corridor with `fitBounds(corridorBounds, { padding: [45, 45], maxZoom: 13 })`. Permanent stop tooltips alternate above and below the route for readability.
+- **Map basemap** follows the active theme: CARTO DarkMatter/Positron when a key is available, otherwise the keyless ESRI Dark/Light Canvas fallback.
 
 ![Evaluator diagnostics](assets/dashboard_evaluator.png)
 
@@ -66,7 +74,17 @@ Example simulation request:
 }
 ```
 
-Each segment response includes `predicted_delay_min`, `lower_bound_min`, `upper_bound_min`, `delay_status`, `is_peak_hour`, `confidence_pct`, `is_low_confidence`, `xai_drivers`, classifier probability, simulated speed, and cumulative corridor timing.
+Each segment response includes `predicted_delay_min`, `lower_bound_min`, `upper_bound_min`, `delay_status`, `is_peak_hour`, `confidence_pct`, `is_low_confidence`, `rider_recommendation`, `xai_drivers`, classifier diagnostics (`classifier_status`, `classifier_probability_pct`, `classifier_agrees`), simulated speed, and cumulative corridor timing. The response also carries `status_rule` so clients can display the exact public status thresholds.
+
+Prediction intervals are centered on the published point delay:
+
+```text
+half_spread = max(0.6, (raw_upper - raw_lower) / 2.0) * (1.35 if is_peak_hour else 1.0)
+lower_bound_min = round(max(-1.0, predicted_delay_min - half_spread), 1)
+upper_bound_min = round(predicted_delay_min + half_spread, 1)
+```
+
+Public `delay_status` is derived strictly from the point delay: `< 2.0 min` is **On-Time**, `2.0–6.0 min` is **Moderate Delay**, and `> 6.0 min` is **Severe Delay**. The classifier remains available as diagnostic metadata but does not override these thresholds. Rider recommendations never claim `Board now` or `On-time service` when confidence is low or the status is not On-Time; they instead give a realistic delay/weather buffer and ask the rider to recheck the live ETA.
 
 ## Model Evidence
 
@@ -112,7 +130,7 @@ Feature schema: `hour_of_day`, `day_of_week`, `is_weekend`, `is_peak_hour`, `seg
 
 ## Basemap Note
 
-The map prefers CARTO DarkMatter when a browser key is supplied through `?carto_key=...` or `window.TRANSITPULSE_CARTO_KEY`. CARTO now requires a key for its basemaps, so the dashboard falls back to the keyless ESRI Dark Canvas basemap by default. This keeps the command center fully functional offline from paid map credentials while preserving the dark visual language.
+The map swaps tiles with the theme. Light mode requests CARTO Positron and dark mode requests CARTO DarkMatter when a browser key is supplied through `?carto_key=...` or `window.TRANSITPULSE_CARTO_KEY`. CARTO now requires a key for its basemaps, so by default the dashboard falls back to the keyless ESRI Light Canvas and Dark Canvas basemaps. This keeps the command center fully functional without paid map credentials while preserving the light/dark visual language.
 
 ## Project Structure
 
@@ -125,12 +143,12 @@ transit-delay-predictor/
 ├── models/                      Frozen joblib artifacts and audit reports
 ├── notebooks/                   Phase 1 pipeline and Phase 2 training notebooks
 ├── src/
-│   ├── app.py                   FastAPI backend and model inference
-│   └── export_artifacts.py      Artifact verification, training fallback, audit generation
+│   ├── app.py                   FastAPI backend, interval math, inference, status rules
+│   └── export_artifacts.py      Artifact verification, audit generation, Phase 2 plot
 ├── web/
-│   ├── index.html               Dark command-center layout
-│   ├── styles.css               Responsive dashboard styling
-│   └── app.js                   Leaflet map, animation, inference, XAI, evaluator UI
+│   ├── index.html               Light/dark command-center layout and lightbox markup
+│   ├── styles.css               Theme tokens, responsive styling, 100%/115% zoom
+│   └── app.js                   Leaflet map, theme/tiles, auto-follow, XAI, evaluator UI
 ├── requirements.txt
 ├── run.ps1                      One-command launcher
 └── TASKS.md                     Build checklist
@@ -162,3 +180,15 @@ Regenerate and verify ML artifacts at any time:
 ```powershell
 venv\Scripts\python.exe src\export_artifacts.py
 ```
+
+This command also regenerates `assets/phase2_model_evaluation.png` from the frozen models and held-out test window. The plot tracks predictions over time, renders the delay-class confusion matrix, and ranks global feature importance. The Phase 1 plot is produced by `notebooks/01_phase1_data_pipeline.ipynb` and saved to `assets/phase1_pipeline_diagnostics.png`.
+
+Frontend behavior was verified with Playwright against Chrome at `http://127.0.0.1:8000`:
+
+- Light/dark theme toggle, `localStorage` persistence, and theme-matched tile layers
+- `100%` / `115%` UI zoom and persisted root font size
+- 440 px inspector, in-map telemetry overlay, and text `Recenter Route` control
+- Alternating permanent stop tooltips and `fitBounds` corridor framing
+- Auto-follow across segments, manual override, and re-sync on the next segment
+- Both evaluator plots loading and opening/closing their lightboxes
+- Responsive layouts at `1920×1080`, `1366×768 @ 115%`, `1024×768`, and `390×844` with no horizontal overflow

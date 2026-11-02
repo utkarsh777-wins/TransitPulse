@@ -2,492 +2,397 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0d1117">
-  <title>TransitPulse AI · NH-44 Live Command Center</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230d1117'/%3E%3Cpath d='M8 21V10.5A2.5 2.5 0 0 1 10.5 8h11A2.5 2.5 0 0 1 24 10.5V21M6 21h20v3a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-1H11v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-3Z' fill='none' stroke='%2358a6ff' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#F3F1EC" id="meta-theme-color">
+  <title>TransitPulse AI · NH-44 delay intelligence</title>
+  <script>
+    /* Set the theme before first paint: ?theme= (screenshots) > saved choice > OS preference. */
+    (function () {
+      var q = new URLSearchParams(location.search).get("theme");
+      var saved = null;
+      try { saved = localStorage.getItem("tp-theme"); } catch (e) {}
+      var t = q === "light" || q === "dark" ? q : saved === "light" || saved === "dark" ? saved
+        : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.dataset.theme = t;
+    })();
+  </script>
+  <link rel="icon" href="assets/logo/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/logo/app-icon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&family=Geist+Mono:wght@400..600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-  <div class="ambient-grid" aria-hidden="true"></div>
-  <div class="app-shell">
-    <header class="topbar">
-      <div class="brand-block">
-        <div class="brand-mark" aria-hidden="true">
-          <span class="brand-pulse"></span>
-          <svg viewBox="0 0 32 32" role="img" aria-label="TransitPulse logo">
-            <path d="M8 21V10.5A2.5 2.5 0 0 1 10.5 8h11A2.5 2.5 0 0 1 24 10.5V21" />
-            <path d="M6 21h20v3a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-1H11v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-3Z" />
-            <path d="M10 12h12M10 16h12M12 25v2M20 25v2" />
-          </svg>
-        </div>
-        <div>
-          <div class="brand-line">
-            <h1>TransitPulse <span>AI</span></h1>
-            <!-- <span class="si-badge">SIH25013</span> -->
-          </div>
-          <p>NH-44 real-time delay intelligence · Jalandhar → Phagwara</p>
-        </div>
-      </div>
+<body data-view="live">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./" aria-label="TransitPulse AI home">
+        <img class="brand-lockup on-light" src="assets/logo/lockup-light.svg" alt="TransitPulse" width="182" height="56">
+        <img class="brand-lockup on-dark" src="assets/logo/lockup-dark.svg" alt="" aria-hidden="true" width="182" height="56">
+        <span class="brand-desc">
+          <span class="brand-product">AI · NH-44 delay intelligence</span>
+          <span class="brand-route">Jalandhar → Phagwara</span>
+        </span>
+      </a>
 
       <nav class="view-tabs" aria-label="Dashboard views" role="tablist">
-        <button class="view-tab is-active" data-view="live" role="tab" aria-selected="true">
-          <span class="tab-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4" /></svg>
-          </span>
-          Live Rider &amp; Fleet Simulator
-          <span class="tab-live-dot" aria-hidden="true"></span>
+        <button class="view-tab is-active" data-view="live" role="tab" aria-selected="true" aria-controls="view-live" id="tab-live" type="button">
+          <span class="tab-long">Live Rider &amp; Fleet Simulator</span><span class="tab-short">Live simulator</span>
         </button>
-        <button class="view-tab" data-view="evaluator" role="tab" aria-selected="false">
-          <span class="tab-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16v-5M12 16V7M16 16v-8M20 16v-3" /></svg>
-          </span>
-          Evaluator Diagnostics
+        <button class="view-tab" data-view="evaluator" role="tab" aria-selected="false" aria-controls="view-evaluator" id="tab-evaluator" type="button">
+          <span class="tab-long">Evaluator Diagnostics</span><span class="tab-short">Diagnostics</span>
         </button>
       </nav>
 
       <div class="topbar-meta">
-        <div class="sync-pill" id="sync-pill">
-          <span class="live-dot" aria-hidden="true"></span>
-          <span id="sync-label">Model Link Active</span>
+        <div class="sync-pill" id="sync-pill" data-state="busy" role="status">
+          <span class="sync-dot" aria-hidden="true"></span>
+          <span id="sync-label">Connecting</span>
         </div>
-        <div class="clock-block">
-          <span class="clock-label">Local IST</span>
-          <strong id="live-clock">--:--:--</strong>
+        <div class="clock" aria-label="Local time, IST">
+          <span class="clock-label">IST</span>
+          <time id="live-clock">--:--:--</time>
         </div>
-      </div>
-    </header>
-
-    <main class="main-canvas">
-      <section class="view is-active" id="view-live" role="tabpanel" aria-label="Live Rider and Fleet Simulator">
-        <div class="stats-strip">
-          <article class="stat-card">
-            <div class="stat-top">
-              <span class="stat-label">Corridor Delay</span>
-              <span class="stat-icon amber" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" /><path d="M12 8v4l2.5 2.5" /></svg>
-              </span>
-            </div>
-            <div class="stat-value"><span id="stat-delay">--</span><small>min</small></div>
-            <div class="stat-foot" id="stat-delay-foot">Awaiting inference</div>
-          </article>
-
-          <article class="stat-card">
-            <div class="stat-top">
-              <span class="stat-label">Fleet Confidence</span>
-              <span class="stat-icon green" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" /></svg>
-              </span>
-            </div>
-            <div class="stat-value"><span id="stat-confidence">--</span><small>%</small></div>
-            <div class="stat-foot" id="stat-confidence-foot">80% quantile envelope</div>
-          </article>
-
-          <article class="stat-card">
-            <div class="stat-top">
-              <span class="stat-label">Next Stop ETA</span>
-              <span class="stat-icon blue" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z" /><circle cx="12" cy="10" r="2" /></svg>
-              </span>
-            </div>
-            <div class="stat-value"><span id="stat-eta">--</span><small id="stat-eta-unit">min</small></div>
-            <div class="stat-foot" id="stat-eta-foot">Next stop</div>
-          </article>
-
-          <article class="stat-card">
-            <div class="stat-top">
-              <span class="stat-label">Live Status</span>
-              <span class="stat-icon red" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="M12 3 3 20h18L12 3Z" /><path d="M12 9v5M12 17h.01" /></svg>
-              </span>
-            </div>
-            <div class="stat-value stat-value-text"><span id="stat-status">--</span></div>
-            <div class="stat-foot" id="stat-status-foot">Classifier output</div>
-          </article>
-        </div>
-
-        <div class="dashboard-grid">
-          <section class="card map-card">
-            <div class="card-head">
-              <div>
-                <span class="eyebrow">Live Fleet Telemetry</span>
-                <h2>NH-44 Corridor Map</h2>
-              </div>
-              <div class="map-head-tools">
-                <div class="map-legend" aria-label="Delay status legend">
-                  <span><i class="legend-dot green"></i>On-Time</span>
-                  <span><i class="legend-dot amber"></i>Moderate</span>
-                  <span><i class="legend-dot red"></i>Severe</span>
-                </div>
-                <button class="icon-button" id="recenter-map" type="button" title="Recenter corridor" aria-label="Recenter corridor">
-                  <svg viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3" /><circle cx="12" cy="12" r="5" /></svg>
-                </button>
-              </div>
-            </div>
-
-            <div class="map-wrap">
-              <div id="map" aria-label="Live Leaflet map of NH-44 corridor"></div>
-              <div class="map-tint" aria-hidden="true"></div>
-              <div class="map-live-chip"><span class="live-dot"></span>DARK CANVAS · LIVE</div>
-
-              <div class="telemetry-hud" id="telemetry-hud">
-                <div class="hud-head">
-                  <div class="bus-identity">
-                    <span class="bus-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24"><path d="M6 17V7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v10M4 17h16M7 20h2M15 20h2M8 9h8M8 13h8" /></svg>
-                    </span>
-                    <div>
-                      <strong>PB08-BUS-101</strong>
-                      <span id="hud-route">Jalandhar BS → Phagwara BS</span>
-                    </div>
-                  </div>
-                  <span class="hud-state" id="hud-state">TRACKING</span>
-                </div>
-                <div class="hud-metrics">
-                  <div><span>LAT</span><strong id="hud-lat">31.3156</strong></div>
-                  <div><span>LON</span><strong id="hud-lon">75.5920</strong></div>
-                  <div><span>SPEED</span><strong><span id="hud-speed">--</span> km/h</strong></div>
-                  <div><span>NEXT STOP</span><strong id="hud-next-stop">PAP Chowk</strong></div>
-                </div>
-                <div class="hud-progress">
-                  <span class="hud-progress-label">Corridor progress</span>
-                  <span class="hud-progress-value" id="hud-progress-value">0%</span>
-                  <div class="hud-track"><i id="hud-progress-bar"></i></div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <aside class="right-rail">
-            <section class="card eta-card" id="eta-card">
-              <div class="eta-alert" id="peak-alert" hidden>
-                <span class="alert-pulse" aria-hidden="true"></span>
-                <div>
-                  <strong>PEAK TRAFFIC VOLATILITY</strong>
-                  <span>LOWER PREDICTION CONFIDENCE</span>
-                </div>
-                <!-- <span class="alert-tag">OBJ 3</span> -->
-              </div>
-
-              <div class="card-head eta-head">
-                <div>
-                  <span class="eyebrow">Rider ETA &amp; Confidence</span>
-                  <h2 id="eta-title">PAP Chowk</h2>
-                </div>
-                <span class="confidence-badge high" id="confidence-badge">Confidence 91%</span>
-              </div>
-
-              <div class="eta-hero">
-                <div class="eta-value" id="eta-value">+<span>1.2</span><small>min</small></div>
-                <div class="eta-meta" id="eta-meta">Scheduled 06:00 · Predicted 06:01</div>
-              </div>
-
-              <div class="eta-range" id="eta-range" hidden>
-                <div class="range-top">
-                  <span>80% Quantile Prediction Range</span>
-                  <i aria-hidden="true"></i>
-                </div>
-                <strong id="eta-range-value">+6.3 to +11.8 mins</strong>
-                <div class="range-track" aria-hidden="true"><i id="range-bar"></i></div>
-              </div>
-
-              <div class="eta-recommendation">
-                <span class="recommendation-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M12 3a7 7 0 0 0-4 12.7V19h8v-3.3A7 7 0 0 0 12 3Z" /><path d="M9 22h6M10 11h4M12 9v4" /></svg>
-                </span>
-                <div>
-                  <span>Rider recommendation</span>
-                  <p id="recommendation">Select a segment to inspect live rider guidance.</p>
-                </div>
-              </div>
-
-              <div class="eta-footer">
-                <div>
-                  <span>Segment</span>
-                  <strong id="eta-segment-name">Jalandhar BS → PAP Chowk</strong>
-                </div>
-                <div>
-                  <span>Classifier</span>
-                  <strong id="eta-classifier">--</strong>
-                </div>
-                <div>
-                  <span>Window</span>
-                  <strong id="eta-window">--</strong>
-                </div>
-              </div>
-            </section>
-
-            <section class="card xai-card">
-              <div class="card-head">
-                <div>
-                  <span class="eyebrow">Explainable AI</span>
-                  <h2>Why this delay?</h2>
-                </div>
-                <span class="mini-tag" id="xai-segment">SEG 01</span>
-              </div>
-              <div class="xai-bars" id="xai-bars" aria-label="Local feature attribution chart"></div>
-              <div class="xai-footer">
-                <span>Neutral baseline <strong id="xai-baseline">--</strong></span>
-                <span>Local leave-one-out attribution · minutes</span>
-              </div>
-            </section>
-          </aside>
-        </div>
-
-        <section class="card segments-card">
-          <div class="card-head">
-            <div>
-              <span class="eyebrow">Classifier Segment Grid</span>
-              <h2>Live Delay Classification</h2>
-            </div>
-            <div class="segments-summary" id="segments-summary">
-              <span><i class="legend-dot green"></i><b id="count-on-time">0</b> On-Time</span>
-              <span><i class="legend-dot amber"></i><b id="count-moderate">0</b> Moderate</span>
-              <span><i class="legend-dot red"></i><b id="count-severe">0</b> Severe</span>
-            </div>
-          </div>
-          <div class="segment-list" id="segment-list"></div>
-        </section>
-      </section>
-
-      <section class="view" id="view-evaluator" role="tabpanel" aria-label="Evaluator diagnostics and validation proof">
-        <div class="evaluator-hero">
-          <div>
-            <span class="eyebrow">Rubric Audit View</span>
-            <h2>Evaluator Diagnostics &amp; Validation Proof</h2>
-            <p>Frozen ML artifacts, data-quality gates, time-respecting validation, and uncertainty calibration for the NH-44 transit corridor.</p>
-          </div>
-          <div class="verification-hero" id="verification-summary">
-            <span class="verification-ring" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" /></svg>
-            </span>
-            <div>
-              <span>Validation state</span>
-              <strong id="eval-badge">Checking artifacts…</strong>
-            </div>
-          </div>
-        </div>
-
-        <div class="metric-grid" id="metric-grid">
-          <article class="metric-card">
-            <span>Model MAE</span>
-            <strong>--</strong>
-            <small>Awaiting diagnostics</small>
-          </article>
-        </div>
-
-        <div class="evaluator-grid">
-          <section class="card dq-card">
-            <div class="card-head">
-              <div>
-                <span class="eyebrow">Objective 1 · Data Integrity</span>
-                <h2>Data-Quality Gate Funnel</h2>
-              </div>
-              <span class="mini-tag success" id="retention-tag">97.81% retention</span>
-            </div>
-            <div class="dq-funnel" id="dq-funnel"></div>
-            <div class="dq-gate-list" id="dq-gates"></div>
-          </section>
-
-          <section class="card split-card">
-            <div class="card-head">
-              <div>
-                <span class="eyebrow">Objective 2 · Validation Protocol</span>
-                <h2>Time-Respecting Split</h2>
-              </div>
-              <span class="mini-tag">Days 1–24 → 25–30</span>
-            </div>
-            <div class="split-visual">
-              <div class="split-bar">
-                <span class="split-train">TRAIN · 80%</span>
-                <span class="split-test">TEST · 20%</span>
-              </div>
-              <div class="split-labels">
-                <span>Days 1–24 · 3,756 segments</span>
-                <span>Days 25–30 · 939 segments</span>
-              </div>
-            </div>
-            <div class="proof-list" id="proof-list">
-              <div class="proof-item"><span class="proof-check">✓</span><span>No future leakage across split boundary</span></div>
-              <div class="proof-item"><span class="proof-check">✓</span><span>5-fold TimeSeriesSplit cross-validation</span></div>
-              <div class="proof-item"><span class="proof-check">✓</span><span>Naive historical-average baseline comparison</span></div>
-              <div class="proof-item"><span class="proof-check">✓</span><span>Held-out future window scoring only</span></div>
-            </div>
-          </section>
-        </div>
-
-        <div class="evaluator-grid evaluator-grid-wide">
-          <section class="card importance-card">
-            <div class="card-head">
-              <div>
-                <span class="eyebrow">Model Interpretability</span>
-                <h2>Global Feature Importance</h2>
-              </div>
-              <span class="mini-tag">Random Forest</span>
-            </div>
-            <div class="importance-bars" id="feature-importance"></div>
-          </section>
-
-          <section class="card uncertainty-card">
-            <div class="card-head">
-              <div>
-                <span class="eyebrow">Objective 3 · Uncertainty Calibration</span>
-                <h2>Peak vs Off-Peak Interval Width</h2>
-              </div>
-              <span class="mini-tag warning">Quantile 10 / 90</span>
-            </div>
-            <div class="uncertainty-visual" id="uncertainty-visual">
-              <div class="uncertainty-row">
-                <span>Off-Peak</span>
-                <div class="uncertainty-track"><i style="width: 35%"></i></div>
-                <strong>--</strong>
-              </div>
-              <div class="uncertainty-row peak">
-                <span>Peak</span>
-                <div class="uncertainty-track"><i style="width: 100%"></i></div>
-                <strong>--</strong>
-              </div>
-            </div>
-            <p class="uncertainty-note" id="uncertainty-note">Loading calibration data from model metadata.</p>
-          </section>
-        </div>
-
-        <div class="evaluator-grid evaluator-grid-wide">
-          <section class="card plot-card">
-            <div class="card-head">
-              <div>
-                <span class="eyebrow">Phase 1 Evidence</span>
-                <h2>Pipeline Diagnostics Plot</h2>
-              </div>
-              <a class="ghost-link" id="plot-link" href="/assets/phase1_pipeline_diagnostics.png" target="_blank" rel="noreferrer">Open full size ↗</a>
-            </div>
-            <div class="plot-frame">
-              <img id="diagnostic-plot" src="/assets/phase1_pipeline_diagnostics.png" alt="Phase 1 data pipeline diagnostics plot">
-            </div>
-            <p class="plot-caption" id="diagnostic-caption">Data-quality gates, corridor telemetry distributions, and cleaning funnel.</p>
-          </section>
-
-          <section class="card artifact-card">
-            <div class="card-head">
-              <div>
-                <span class="eyebrow">Artifact Freeze</span>
-                <h2>Integrity Inventory</h2>
-              </div>
-              <span class="mini-tag success" id="artifact-count">5 artifacts</span>
-            </div>
-            <div class="artifact-table-wrap">
-              <table class="artifact-table">
-                <thead>
-                  <tr><th>Artifact</th><th>Size</th><th>SHA-256</th><th>Status</th></tr>
-                </thead>
-                <tbody id="artifact-table"></tbody>
-              </table>
-            </div>
-            <div class="runtime-block" id="diag-runtime">
-              <span>Runtime diagnostics unavailable</span>
-            </div>
-          </section>
-        </div>
-      </section>
-    </main>
-
-    <section class="control-dock" aria-label="Simulation controls">
-      <div class="dock-head">
-        <div class="dock-title">
-          <span class="dock-kicker"><span class="live-dot"></span> SCENARIO ENGINE</span>
-          <strong>Live Simulation Controls</strong>
-        </div>
-        <div class="preset-group" aria-label="Quick presets">
-          <button class="preset-btn" data-preset="midday" type="button">Midday Clear</button>
-          <button class="preset-btn" data-preset="rush" type="button">Morning Rush + Rain</button>
-          <button class="preset-btn" data-preset="evening" type="button">Evening Gridlock</button>
-        </div>
-        <button class="play-button" id="play-toggle" type="button" aria-pressed="true">
-          <span class="play-icon" aria-hidden="true">
-            <svg class="icon-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" /></svg>
-            <svg class="icon-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z" /></svg>
-          </span>
-          <span class="play-copy">
-            <small>Bus telemetry</small>
-            <strong id="play-label">Pause animation</strong>
-          </span>
+        <button class="icon-btn theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark theme" title="Switch theme">
+          <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
         </button>
       </div>
+    </div>
+  </header>
 
-      <div class="control-grid">
-        <div class="control-group time-control">
-          <div class="control-label">
-            <span>Time of Day</span>
-            <strong><span id="time-value">13:00</span><em id="peak-flag">Off-Peak</em></strong>
-          </div>
-          <div class="range-wrap peak-wrap">
-            <span class="peak-band morning" aria-hidden="true"></span>
-            <span class="peak-band evening" aria-hidden="true"></span>
-            <input type="range" id="time-slider" min="6" max="21" step="1" value="13" aria-label="Time of day">
-          </div>
-          <div class="range-scale"><span>06:00</span><span class="peak-key">Peak windows 08–10 · 17–19</span><span>21:00</span></div>
-        </div>
-
-        <div class="control-group weather-control">
-          <div class="control-label">
-            <span>Weather Condition</span>
-            <strong id="weather-value">Clear</strong>
-          </div>
-          <div class="weather-toggle" role="group" aria-label="Weather severity">
-            <button class="weather-btn is-active" data-weather="0" type="button"><span>☀</span>Clear <em>0</em></button>
-            <button class="weather-btn" data-weather="1" type="button"><span>☂</span>Light <em>1</em></button>
-            <button class="weather-btn" data-weather="2" type="button"><span>⛈</span>Heavy <em>2</em></button>
-          </div>
-        </div>
-
-        <div class="control-group">
-          <div class="control-label">
-            <span>Upstream Traffic Lag</span>
-            <strong><span id="lag-value">0.5</span><em>min</em></strong>
-          </div>
-          <div class="range-wrap">
-            <input type="range" id="lag-slider" min="0" max="15" step="0.1" value="0.5" aria-label="Rolling three-trip delay">
-          </div>
-          <div class="range-scale"><span>0 min</span><span>15 min</span></div>
-        </div>
-
-        <div class="control-group">
-          <div class="control-label">
-            <span>Boarding Dwell Time</span>
-            <strong><span id="dwell-value">30</span><em>sec</em></strong>
-          </div>
-          <div class="range-wrap">
-            <input type="range" id="dwell-slider" min="15" max="120" step="5" value="30" aria-label="Previous stop dwell time">
-          </div>
-          <div class="range-scale"><span>15 s</span><span>120 s</span></div>
-        </div>
-
-        <div class="control-group speed-control">
-          <div class="control-label">
-            <span>Corridor GPS Speed</span>
-            <strong><span id="speed-value">30</span><em>km/h</em></strong>
-          </div>
-          <div class="range-wrap">
-            <input type="range" id="speed-slider" min="10" max="60" step="1" value="30" aria-label="Corridor GPS speed">
-          </div>
-          <div class="range-scale"><span>10</span><span>60 km/h</span></div>
-        </div>
+  <main class="main" id="main">
+    <!-- ============================================================ LIVE -->
+    <section class="view view-live" id="view-live" role="tabpanel" aria-labelledby="tab-live">
+      <div class="kpis area-kpis" aria-label="Corridor summary">
+        <article class="kpi">
+          <h3 class="label">Corridor delay</h3>
+          <p class="kpi-value"><span class="num" id="stat-delay">--</span><span class="unit">min</span></p>
+          <p class="kpi-foot" id="stat-delay-foot">Awaiting inference</p>
+        </article>
+        <article class="kpi">
+          <h3 class="label">Fleet confidence</h3>
+          <p class="kpi-value"><span class="num" id="stat-confidence">--</span><span class="unit">%</span></p>
+          <p class="kpi-foot" id="stat-confidence-foot">80% quantile envelope</p>
+        </article>
+        <article class="kpi kpi-eta">
+          <h3 class="label">Next stop ETA</h3>
+          <p class="kpi-value"><span class="flap flap-sm" id="stat-eta" aria-live="off">--</span><span class="unit">min</span></p>
+          <p class="kpi-foot" id="stat-eta-foot">Next stop</p>
+        </article>
+        <article class="kpi">
+          <h3 class="label">Live status</h3>
+          <p class="kpi-value kpi-status"><span class="status-dot" id="stat-status-dot" aria-hidden="true"></span><span id="stat-status">--</span></p>
+          <p class="kpi-foot" id="stat-status-foot">Classifier output</p>
+        </article>
       </div>
+
+      <section class="card map-card area-map" aria-labelledby="map-title">
+        <header class="card-head">
+          <div class="card-title">
+            <span class="label">Live fleet telemetry</span>
+            <h2 id="map-title">NH-44 corridor</h2>
+          </div>
+          <div class="card-tools">
+            <ul class="legend" aria-label="Segment status legend">
+              <li><i class="swatch ontime"></i>On time</li>
+              <li><i class="swatch moderate"></i>Moderate</li>
+              <li><i class="swatch severe"></i>Severe</li>
+            </ul>
+            <button class="icon-btn" id="recenter-map" type="button" title="Recenter corridor" aria-label="Recenter corridor">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4"/><circle cx="12" cy="12" r="2.5"/></svg>
+            </button>
+          </div>
+        </header>
+        <div class="map-wrap" id="map-wrap">
+          <div id="map" aria-label="Map of the NH-44 corridor from Jalandhar to Phagwara with live bus position"></div>
+          <div class="map-fallback" id="map-fallback" hidden></div>
+        </div>
+        <dl class="telemetry" id="telemetry">
+          <div class="tel-bus">
+            <dt class="sr-only">Vehicle</dt>
+            <dd>
+              <span class="bus-chip" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 16V7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v9M5 16h14M8 19h1.5M14.5 19H16M8.5 9h7M8.5 12.5h7"/></svg></span>
+              <span><strong class="mono">PB08-BUS-101</strong><span class="tel-route" id="hud-route">Jalandhar BS → Phagwara BS</span></span>
+            </dd>
+          </div>
+          <div><dt>State</dt><dd><span class="state-chip" id="hud-state">Tracking</span></dd></div>
+          <div><dt>Heading to</dt><dd id="hud-next-stop">PAP Chowk</dd></div>
+          <div><dt>Speed</dt><dd class="mono"><span id="hud-speed">--</span> km/h</dd></div>
+          <div class="tel-coords"><dt>Position</dt><dd class="mono"><span id="hud-lat">31.31560</span>, <span id="hud-lon">75.59200</span></dd></div>
+          <div class="tel-progress">
+            <dt>Progress <span class="mono" id="hud-progress-value">0%</span></dt>
+            <dd><span class="track" aria-hidden="true"><i id="hud-progress-bar"></i></span></dd>
+          </div>
+        </dl>
+      </section>
+
+      <div class="rail area-rail">
+        <section class="card eta-card" id="eta-card" aria-labelledby="eta-title">
+          <div class="notice" id="peak-alert" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 3 20h18L12 4Z"/><path d="M12 10v4M12 17h.01"/></svg>
+            <p><strong>Peak traffic volatility.</strong> <span>Prediction confidence is lower, so the ETA is shown as an 80% window.</span></p>
+          </div>
+          <header class="card-head">
+            <div class="card-title">
+              <span class="label">Rider ETA · next stop</span>
+              <h2 id="eta-title">PAP Chowk</h2>
+            </div>
+            <span class="badge" id="confidence-badge">Confidence --</span>
+          </header>
+
+          <div class="eta-hero">
+            <span class="eta-kicker" id="eta-kicker">Arrives in</span>
+            <div class="eta-figure">
+              <span class="flap flap-lg" id="eta-value">--</span><span class="unit">min</span>
+            </div>
+            <div class="eta-delta">
+              <span class="status-chip" id="eta-status">--</span>
+              <span class="eta-delta-text" id="eta-meta">Scheduled -- min</span>
+            </div>
+          </div>
+
+          <div class="eta-window" id="eta-range" hidden>
+            <div class="eta-window-top">
+              <span class="label">80% arrival window</span>
+              <strong class="mono" id="eta-range-value">--</strong>
+            </div>
+            <div class="window-track" aria-hidden="true">
+              <i class="window-band" id="range-bar"></i>
+              <i class="window-sched" id="range-sched"></i>
+            </div>
+            <div class="window-scale"><span>0 min</span><span id="range-max">--</span></div>
+          </div>
+
+          <div class="advice">
+            <span class="label">Rider recommendation</span>
+            <p id="recommendation">Select a segment to inspect live rider guidance.</p>
+          </div>
+
+          <dl class="facts">
+            <div><dt>Segment</dt><dd id="eta-segment-name">--</dd></div>
+            <div><dt>Classifier</dt><dd id="eta-classifier">--</dd></div>
+            <div><dt>Delay window</dt><dd class="mono" id="eta-window">--</dd></div>
+          </dl>
+        </section>
+
+        <section class="card xai-card" aria-labelledby="xai-title">
+          <header class="card-head">
+            <div class="card-title">
+              <span class="label">Explainable AI</span>
+              <h2 id="xai-title">Why this delay?</h2>
+            </div>
+            <span class="tag mono" id="xai-segment">SEG 01</span>
+          </header>
+          <div class="xai-row xai-axis" aria-hidden="true"><span></span><span class="xai-axis-labels"><span>− Saves</span><span>Adds +</span></span><span></span></div>
+          <div class="xai-bars" id="xai-bars" role="list" aria-label="Local feature attribution in minutes"></div>
+          <div class="xai-sum" id="xai-sum"></div>
+          <p class="footnote">Neutral baseline <strong class="mono" id="xai-baseline">--</strong>. Local leave-one-out attribution, in minutes: each bar is the change in predicted delay when that factor is added back.</p>
+        </section>
+      </div>
+
+      <section class="card segments-card area-segments" aria-labelledby="seg-title">
+        <header class="card-head">
+          <div class="card-title">
+            <span class="label">Classifier segment grid</span>
+            <h2 id="seg-title">Live delay classification</h2>
+          </div>
+          <ul class="seg-summary" aria-label="Segments by status">
+            <li><i class="swatch ontime"></i><b class="mono" id="count-on-time">0</b> On time</li>
+            <li><i class="swatch moderate"></i><b class="mono" id="count-moderate">0</b> Moderate</li>
+            <li><i class="swatch severe"></i><b class="mono" id="count-severe">0</b> Severe</li>
+          </ul>
+        </header>
+        <div class="seg-table" role="table" aria-label="Segments">
+          <div class="seg-row seg-head" role="row">
+            <span role="columnheader">Seg</span>
+            <span role="columnheader">Route</span>
+            <span role="columnheader" class="r">Sched</span>
+            <span role="columnheader" class="r">ETA</span>
+            <span role="columnheader" class="r">Delay</span>
+            <span role="columnheader">80% window</span>
+            <span role="columnheader">Status</span>
+            <span role="columnheader">Confidence</span>
+          </div>
+          <div id="segment-list" role="rowgroup"></div>
+        </div>
+      </section>
+
+      <section class="card controls-card area-controls" id="controls" aria-labelledby="controls-title">
+        <header class="card-head controls-head">
+          <button class="sheet-handle" id="sheet-toggle" type="button" aria-expanded="false" aria-controls="controls-body">
+            <span class="grabber" aria-hidden="true"></span>
+            <span class="card-title">
+              <span class="label">Scenario engine</span>
+              <span class="h2" id="controls-title">Simulation controls</span>
+            </span>
+            <span class="sheet-summary mono" id="sheet-summary">13:00 · Clear</span>
+            <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>
+          </button>
+          <button class="btn btn-quiet play-btn" id="play-toggle" type="button" aria-pressed="true">
+            <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12M15 6v12"/></svg>
+            <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6v12l10-6-10-6Z"/></svg>
+            <span id="play-label">Pause bus</span>
+          </button>
+        </header>
+
+        <div class="controls-body" id="controls-body">
+          <div class="field">
+            <span class="field-label" id="preset-label">Preset scenario</span>
+            <div class="segmented presets" role="group" aria-labelledby="preset-label">
+              <button class="seg-btn preset-btn" data-preset="midday" type="button">Midday Clear</button>
+              <button class="seg-btn preset-btn" data-preset="rush" type="button">Morning Rush + Rain</button>
+              <button class="seg-btn preset-btn" data-preset="evening" type="button">Evening Gridlock</button>
+            </div>
+          </div>
+
+          <div class="control-grid">
+            <div class="field">
+              <label class="field-label" for="time-slider">Time of day <output class="mono"><span id="time-value">13:00</span> <em class="peak-flag" id="peak-flag">Off-peak</em></output></label>
+              <div class="range peak-range">
+                <span class="peak-band" style="--from:2;--to:4" aria-hidden="true"></span>
+                <span class="peak-band" style="--from:11;--to:13" aria-hidden="true"></span>
+                <input type="range" id="time-slider" min="6" max="21" step="1" value="13">
+              </div>
+              <div class="scale"><span>06:00</span><span>Peak 08–10 · 17–19</span><span>21:00</span></div>
+            </div>
+
+            <div class="field">
+              <span class="field-label" id="weather-label">Weather <output id="weather-value">Clear</output></span>
+              <div class="segmented weather" role="group" aria-labelledby="weather-label">
+                <button class="seg-btn weather-btn is-active" data-weather="0" type="button">Clear</button>
+                <button class="seg-btn weather-btn" data-weather="1" type="button">Light rain</button>
+                <button class="seg-btn weather-btn" data-weather="2" type="button">Heavy</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="lag-slider">Upstream traffic lag <output class="mono"><span id="lag-value">0.5</span> min</output></label>
+              <div class="range"><input type="range" id="lag-slider" min="0" max="15" step="0.1" value="0.5"></div>
+              <div class="scale"><span>0</span><span>15 min</span></div>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="dwell-slider">Boarding dwell time <output class="mono"><span id="dwell-value">30</span> s</output></label>
+              <div class="range"><input type="range" id="dwell-slider" min="15" max="120" step="5" value="30"></div>
+              <div class="scale"><span>15 s</span><span>120 s</span></div>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="speed-slider">Corridor GPS speed <output class="mono"><span id="speed-value">30</span> km/h</output></label>
+              <div class="range"><input type="range" id="speed-slider" min="10" max="60" step="1" value="30"></div>
+              <div class="scale"><span>10</span><span>60 km/h</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
     </section>
 
-    <footer class="app-footer">
-      <span>TransitPulse AI · Public Transport Tracking &amp; Real-Time Delay Prediction</span>
-      <span id="footer-mode">Live simulation · FastAPI + scikit-learn</span>
-    </footer>
-  </div>
+    <!-- ============================================================ EVALUATOR -->
+    <section class="view view-eval" id="view-evaluator" role="tabpanel" aria-labelledby="tab-evaluator" hidden>
+      <div class="eval-hero">
+        <div class="eval-intro">
+          <span class="label">Rubric audit view</span>
+          <h2>Evaluator diagnostics &amp; validation proof</h2>
+          <p>Frozen ML artifacts, data-quality gates, time-respecting validation and uncertainty calibration for the NH-44 transit corridor.</p>
+        </div>
+        <div class="verdict" id="verification-summary">
+          <span class="verdict-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span>
+          <div>
+            <span class="label">Validation state</span>
+            <strong id="eval-badge">Checking artifacts…</strong>
+          </div>
+        </div>
+      </div>
 
+      <div class="metric-grid" id="metric-grid">
+        <article class="metric"><h3 class="label">Model MAE</h3><p class="metric-value">--</p><p class="kpi-foot">Awaiting diagnostics</p></article>
+      </div>
+
+      <div class="eval-grid">
+        <section class="card" aria-labelledby="dq-title">
+          <header class="card-head">
+            <div class="card-title"><span class="label">Objective 1 · Data integrity</span><h2 id="dq-title">Data-quality gate funnel</h2></div>
+            <span class="tag ok" id="retention-tag">-- retention</span>
+          </header>
+          <div class="funnel" id="dq-funnel"></div>
+          <div class="gates" id="dq-gates"></div>
+        </section>
+
+        <section class="card" aria-labelledby="split-title">
+          <header class="card-head">
+            <div class="card-title"><span class="label">Objective 2 · Validation protocol</span><h2 id="split-title">Time-respecting split</h2></div>
+            <span class="tag mono">Days 1–24 → 25–30</span>
+          </header>
+          <div class="split">
+            <div class="split-bar" aria-hidden="true"><span class="split-train">Train · 80%</span><span class="split-test">Test · 20%</span></div>
+            <div class="split-labels"><span>Days 1–24 · 3,756 segments</span><span>Days 25–30 · 939 segments</span></div>
+          </div>
+          <ul class="checks" id="proof-list">
+            <li>No future leakage across the split boundary</li>
+            <li>5-fold TimeSeriesSplit cross-validation</li>
+            <li>Naive historical-average baseline comparison</li>
+            <li>Held-out future window scoring only</li>
+          </ul>
+        </section>
+
+        <section class="card" aria-labelledby="imp-title">
+          <header class="card-head">
+            <div class="card-title"><span class="label">Model interpretability</span><h2 id="imp-title">Global feature importance</h2></div>
+            <span class="tag">Random forest</span>
+          </header>
+          <div class="hbars" id="feature-importance"></div>
+        </section>
+
+        <section class="card" aria-labelledby="unc-title">
+          <header class="card-head">
+            <div class="card-title"><span class="label">Objective 3 · Uncertainty calibration</span><h2 id="unc-title">Peak vs off-peak interval width</h2></div>
+            <span class="tag warn mono">Quantile 10 / 90</span>
+          </header>
+          <div class="hbars uncertainty" id="uncertainty-visual"></div>
+          <p class="note" id="uncertainty-note">Loading calibration data from model metadata.</p>
+        </section>
+
+        <section class="card plot-card" aria-labelledby="plot-title">
+          <header class="card-head">
+            <div class="card-title"><span class="label">Phase 1 evidence</span><h2 id="plot-title">Pipeline diagnostics plot</h2></div>
+            <a class="link" id="plot-link" href="/assets/phase1_pipeline_diagnostics.png" target="_blank" rel="noreferrer">Open full size <span aria-hidden="true">↗</span></a>
+          </header>
+          <figure class="plot-frame" id="plot-frame">
+            <img id="diagnostic-plot" src="/assets/phase1_pipeline_diagnostics.png" alt="Phase 1 data pipeline diagnostics plot">
+            <figcaption id="diagnostic-caption">Data-quality gates, corridor telemetry distributions and cleaning funnel.</figcaption>
+          </figure>
+        </section>
+
+        <section class="card artifact-card" aria-labelledby="art-title">
+          <header class="card-head">
+            <div class="card-title"><span class="label">Artifact freeze</span><h2 id="art-title">Integrity inventory</h2></div>
+            <span class="tag ok" id="artifact-count">-- artifacts</span>
+          </header>
+          <table class="artifacts">
+            <thead><tr><th scope="col">Artifact</th><th scope="col" class="r">Size</th><th scope="col">SHA-256</th><th scope="col">Status</th></tr></thead>
+            <tbody id="artifact-table"></tbody>
+          </table>
+          <dl class="runtime" id="diag-runtime"><div><dt>Runtime</dt><dd>Unavailable</dd></div></dl>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>TransitPulse AI · Public transport tracking &amp; real-time delay prediction</span>
+    <span id="footer-mode">Live simulation · FastAPI + scikit-learn</span>
+  </footer>
+
+  <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js"></script>
+  <script src="standin.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
