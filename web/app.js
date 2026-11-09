@@ -1,4 +1,4 @@
-/* TransitPulse AI — dashboard controller (theme v2 "Departures").
+/* TransitPulse — dashboard controller (theme v2 "Departures").
    Based on source/web/app.js: same API calls, presets, state and render flow.
    Changes: theme handling, one consistent ETA story, map decluttering, phone sheet,
    split-flap numerals, and an in-browser stand-in when the FastAPI backend is unreachable. */
@@ -124,14 +124,18 @@ async function fetchJson(url, options = {}) {
 const FORCE_STANDIN = window.location.protocol === "file:" || params.has("standin");
 function activateStandin() {
   state.standin = true;
-  if (dom.standinBanner) dom.standinBanner.hidden = false;
+  if (dom.standinBanner) dom.standinBanner.dataset.mode = "standin";
   dom.syncPill.title = "Stand-in fallback: in-browser heuristic, not the trained model.";
-  dom.footerMode.textContent = "Stand-in fallback · in-browser heuristic, not the trained model";
+  dom.footerMode.textContent = "Stand-in model · runs in your browser, not the trained model";
 }
 async function api(url, options = {}) {
   const path = apiPath(url);
   if (!FORCE_STANDIN && !state.standin) {
-    try { return await fetchJson(path, options); }
+    try {
+      const data = await fetchJson(path, options);
+      if (dom.standinBanner && dom.standinBanner.dataset.mode === "pending") dom.standinBanner.dataset.mode = "live";
+      return data;
+    }
     catch (error) { if (!window.TPStandIn) throw error; }
   }
   if (!window.TPStandIn) throw new Error("No backend and no stand-in");
@@ -175,7 +179,10 @@ function setFlap(el, text) {
   if (el.dataset.text === next) return;
   const prev = el.dataset.text ?? "";
   el.dataset.text = next;
-  el.setAttribute("aria-label", next.replace("–", " to "));
+  /* aria-label is not allowed on a plain <span>; the flap is aria-hidden and the value goes to #<id>-sr. */
+  el.setAttribute("aria-hidden", "true");
+  const sr = document.getElementById(`${el.id}-sr`);
+  if (sr) sr.textContent = next.replace("–", " to ");
   const isTile = (ch) => /[0-9A-Z]/.test(ch);
   const chars = Array.from(next);
   const same = prev.length === next.length && el.children.length === chars.length;
@@ -262,7 +269,7 @@ async function runSimulation() {
     if (sequence !== state.requestSeq) return;
     state.result = result;
     applySimulation(result);
-    setSyncState(state.standin ? "standin" : "ok", okLabel());
+    if (navigator.onLine === false || FORCED_STATE === "offline") goOffline(); else setSyncState(state.standin ? "standin" : "ok", okLabel());
   } catch (error) {
     if (sequence !== state.requestSeq) return;
     setSyncState("error", "Inference offline");
@@ -424,16 +431,16 @@ function renderSegmentList() {
     const d = Number(s.predicted_delay_min);
     const dcls = d >= 5 ? "is-severe" : d >= 2 ? "is-late" : d <= -0.5 ? "is-early" : "";
     const etaText = story.low ? `${story.lo.toFixed(0)}–${story.hi.toFixed(0)}` : story.eta.toFixed(1);
-    return `<button class="seg-row seg-item${sel}" role="row" data-segment-id="${s.segment_id}" type="button" aria-pressed="${sel ? "true" : "false"}" aria-label="Inspect ${escapeHtml(routeName(s.name))}">
-        <span class="seg-id" role="cell">${id}</span>
-        <span class="seg-name" role="cell"><strong data-id="${id}">${escapeHtml(shortName(s.start_stop))} → ${escapeHtml(shortName(s.end_stop))}</strong><small>${Number(s.distance_km).toFixed(1)} km</small></span>
-        <span class="seg-num" role="cell">${Number(s.scheduled_time_min).toFixed(1)}</span>
-        <span class="seg-num is-strong" role="cell">${etaText}</span>
-        <span class="seg-num seg-delay ${dcls}" role="cell">${signed(d)}</span>
-        <span class="seg-window" role="cell">${signed(s.lower_bound_min)} to ${signed(s.upper_bound_min)}</span>
-        <span class="seg-nums" role="cell"><span>Sched <b>${Number(s.scheduled_time_min).toFixed(1)}</b></span><span>ETA <b>${etaText}</b> min</span><span>Delay <b class="seg-delay ${dcls}">${signed(d)}</b></span><span>80% <b>${signed(s.lower_bound_min)}…${signed(s.upper_bound_min)}</b></span></span>
-        <span class="seg-badge" role="cell"><span class="status-chip ${cls}">${statusText(s.delay_status)}</span></span>
-        <span class="seg-conf" role="cell"><span class="track"><i style="width:${clamp(s.confidence_pct, 4, 100)}%"></i></span><span>${Number(s.confidence_pct).toFixed(0)}%</span></span>
+    return `<button class="seg-row seg-item${sel}" data-segment-id="${s.segment_id}" type="button" aria-pressed="${sel ? "true" : "false"}">
+        <span class="seg-id">${id}</span>
+        <span class="seg-name"><strong data-id="${id}">${escapeHtml(shortName(s.start_stop))} → ${escapeHtml(shortName(s.end_stop))}</strong><small>${Number(s.distance_km).toFixed(1)} km</small></span>
+        <span class="seg-num">${Number(s.scheduled_time_min).toFixed(1)}</span>
+        <span class="seg-num is-strong">${etaText}</span>
+        <span class="seg-num seg-delay ${dcls}">${signed(d)}</span>
+        <span class="seg-window">${signed(s.lower_bound_min)} to ${signed(s.upper_bound_min)}</span>
+        <span class="seg-nums"><span>Sched <b>${Number(s.scheduled_time_min).toFixed(1)}</b></span><span>ETA <b>${etaText}</b> min</span><span>Delay <b class="seg-delay ${dcls}">${signed(d)}</b></span><span>80% <b>${signed(s.lower_bound_min)}…${signed(s.upper_bound_min)}</b></span></span>
+        <span class="seg-badge"><span class="status-chip ${cls}">${statusText(s.delay_status)}</span></span>
+        <span class="seg-conf"><span class="track"><i style="width:${clamp(s.confidence_pct, 4, 100)}%"></i></span><span>${Number(s.confidence_pct).toFixed(0)}%</span></span>
       </button>`;
   }).join("");
 }
@@ -489,10 +496,21 @@ function initMap(corridor) {
   state.map = L.map("map", { zoomControl: true, attributionControl: true, scrollWheelZoom: false, zoomSnap: 0.25 });
   state.map.attributionControl.setPrefix(false).addAttribution("Tiles © Esri");
   const u = tileUrls();
-  const base = L.tileLayer(u.base, { maxZoom: 16, className: "tp-tiles", crossOrigin: true }).addTo(state.map);
+  /* No crossOrigin: tiles are plain <img>, never read back, so CORS only produced console errors. */
+  const base = L.tileLayer(u.base, { maxZoom: 16, className: "tp-tiles" }).addTo(state.map);
   state.tileLayers.push(base);
-  if (u.ref) state.tileLayers.push(L.tileLayer(u.ref, { maxZoom: 16, opacity: 0.9, className: "tp-tiles", crossOrigin: true }).addTo(state.map));
-  base.on("tileerror", () => { state.tileErrors += 1; if (state.tileErrors >= 4) useFallback("Map tiles unavailable"); });
+  if (u.ref) state.tileLayers.push(L.tileLayer(u.ref, { maxZoom: 16, opacity: 0.9, className: "tp-tiles" }).addTo(state.map));
+  /* One quiet retry per tile after 1.5 s; only repeated failures switch to the schematic corridor. */
+  base.on("tileerror", (e) => {
+    const img = e.tile;
+    if (img && !img.dataset.retried) {
+      img.dataset.retried = "1";
+      window.setTimeout(() => { img.src = base.getTileUrl(e.coords); }, 1500);
+      return;
+    }
+    state.tileErrors += 1;
+    if (state.tileErrors >= 4) useFallback("Map tiles unavailable");
+  });
   base.on("tileload", () => { state.tileErrors = Math.max(0, state.tileErrors - 1); });
 
   corridor.segments.forEach((segment) => {
@@ -509,7 +527,7 @@ function initMap(corridor) {
     const icon = L.divIcon({
       className: `stop-anchor${terminal ? " is-terminal" : ""}`,
       html: `<span class="stop-dot"></span><span class="stop-label" data-stop="${stop.stop_id}" data-side="${LABEL_SIDES[stop.stop_id] || "right"}">${escapeHtml(shortName(stop.name))}</span>`,
-      iconSize: [16, 16], iconAnchor: [8, 8],
+      iconSize: [44, 44], iconAnchor: [22, 22], /* 44 px pointer target; the dot stays 12–14 px */
     });
     const marker = L.marker([stop.lat, stop.lon], { icon, zIndexOffset: 200, keyboard: false }).addTo(state.map);
     marker.bindTooltip(`${escapeHtml(stop.name)} · stop ${stop.stop_id + 1} of ${corridor.stops.length} · scheduled +${Number(stop.scheduled_offset_min).toFixed(1)} min`, { className: "tp-tip", direction: "top", offset: [0, -10] });
@@ -518,10 +536,12 @@ function initMap(corridor) {
 
   const busIcon = L.divIcon({
     className: "bus-anchor",
-    html: `<div class="bus-marker" title="${BUS_ID}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v9M5 16h14M8 19h1.5M14.5 19H16M8.5 9h7M8.5 12.5h7"/></svg></div>`,
-    iconSize: [26, 26], iconAnchor: [13, 13],
+    html: `<div class="bus-marker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v9M5 16h14M8 19h1.5M14.5 19H16M8.5 9h7M8.5 12.5h7"/></svg></div>`,
+    iconSize: [44, 44], iconAnchor: [22, 22],
   });
-  state.busMarker = L.marker([corridor.stops[0].lat, corridor.stops[0].lon], { icon: busIcon, zIndexOffset: 1000, interactive: false }).addTo(state.map);
+  /* 44 × 44 hit area around the 26 px tile; keyboard-focusable with a name and a tooltip. */
+  state.busMarker = L.marker([corridor.stops[0].lat, corridor.stops[0].lon], { icon: busIcon, zIndexOffset: 1000, keyboard: true, title: `Bus ${BUS_ID}`, alt: `Bus ${BUS_ID}` }).addTo(state.map);
+  state.busMarker.bindTooltip(`Bus ${BUS_ID}`, { className: "tp-tip", direction: "top", offset: [0, -16] });
 
   fitCorridor();
   state.map.on("zoomend moveend resize", () => declutterLabels(true));
@@ -720,9 +740,15 @@ function togglePlayback() {
   state.playing = !state.playing;
   state.lastFrame = null;
   dom.playToggle.classList.toggle("is-paused", !state.playing);
-  dom.playToggle.setAttribute("aria-pressed", String(state.playing));
-  dom.playLabel.textContent = state.playing ? "Pause bus" : "Resume bus";
+  setPlayName();
   updateHudPosition(performance.now(), true);
+}
+
+/* The visible label is hidden under 640 px, so the button always carries its own name. */
+function setPlayName() {
+  const name = state.playing ? "Pause bus" : "Resume bus";
+  dom.playLabel.textContent = name;
+  dom.playToggle.setAttribute("aria-label", name);
 }
 
 function applyPreset(name) {
@@ -755,7 +781,7 @@ function switchView(view) {
   Object.entries(dom.views).forEach(([key, el]) => { el.hidden = key !== view; });
   document.body.dataset.view = view;
   if (state.standin) {
-    dom.footerMode.textContent = "Stand-in fallback · in-browser heuristic, not the trained model";
+    dom.footerMode.textContent = "Stand-in model · runs in your browser, not the trained model";
   } else {
     dom.footerMode.textContent = view === "live" ? "Live simulation · FastAPI + scikit-learn" : "Evaluator audit · frozen artifacts + validation proof";
   }
@@ -905,14 +931,51 @@ async function loadDiagnostics() {
   }
 }
 
+/* ---------------------------------------------------------------- page states
+   html[data-demo]: "loading" → (after 300 ms) "skeleton" → "ready" | "error". Offline is a pill state.
+   ?state=loading|error|offline freezes a state for captures and reviews. */
+const FORCED_STATE = params.get("state");
+function setDemoState(kind) {
+  document.documentElement.dataset.demo = kind;
+  const card = $("demo-error");
+  if (card) card.hidden = kind !== "error";
+}
+function goOffline() { setSyncState("offline", "Offline · showing the last result"); }
+function bindConnectivity() {
+  window.addEventListener("offline", goOffline);
+  window.addEventListener("online", () => { if (state.corridor) scheduleSimulation(40); else retryBoot(); });
+  const retry = $("demo-retry");
+  if (retry) retry.addEventListener("click", retryBoot);
+}
+async function retryBoot() {
+  setDemoState("loading");
+  setSyncState("busy", "Retrying");
+  const t = window.setTimeout(() => { if (document.documentElement.dataset.demo === "loading") setDemoState("skeleton"); }, 300);
+  try {
+    if (!state.corridor) { state.corridor = await api("/api/corridor"); initMap(state.corridor); loadDiagnostics(); }
+    await runSimulation();
+    window.clearTimeout(t);
+    if (state.result) setDemoState("ready"); else setDemoState("error");
+  } catch (error) {
+    window.clearTimeout(t);
+    setDemoState("error");
+    setSyncState("error", "Corridor offline");
+  }
+}
+
 /* ---------------------------------------------------------------- boot */
 async function init() {
+  setDemoState("loading");
+  const skeletonTimer = window.setTimeout(() => { if (document.documentElement.dataset.demo === "loading") setDemoState("skeleton"); }, 300);
+  bindConnectivity();
+  if (FORCED_STATE === "loading") { window.clearTimeout(skeletonTimer); setDemoState("skeleton"); bindTheme(); startClock(); return; }
+  if (FORCED_STATE === "error") { window.clearTimeout(skeletonTimer); bindTheme(); startClock(); setDemoState("error"); setSyncState("error", "Corridor offline"); document.documentElement.dataset.ready = "1"; return; }
   bindTheme();
   startClock();
   bindEvents();
   syncControlsFromState();
   dom.playToggle.classList.toggle("is-paused", !state.playing);
-  dom.playLabel.textContent = state.playing ? "Pause bus" : "Resume bus";
+  setPlayName();
   switchView(params.get("view") === "evaluator" ? "evaluator" : "live");
 
   try {
@@ -920,12 +983,16 @@ async function init() {
     state.corridor = corridor;
     initMap(corridor);
   } catch (error) {
+    window.clearTimeout(skeletonTimer);
     setSyncState("error", "Corridor offline");
-    showToast("Could not load the NH-44 corridor from the backend.", true);
+    setDemoState("error");
     return;
   }
   loadDiagnostics();
   await runSimulation();
+  window.clearTimeout(skeletonTimer);
+  setDemoState(state.result ? "ready" : "error");
+  if (FORCED_STATE === "offline" || navigator.onLine === false) goOffline();
   if (params.get("sheet") === "open") setSheet(true);
   window.requestAnimationFrame(animateBus);
   window.setTimeout(() => { declutterLabels(true); document.documentElement.dataset.ready = "1"; }, 400);

@@ -12,6 +12,17 @@
   var isApp = document.body.hasAttribute("data-app"); // demo.html: app.js owns the theme toggle
 
   /* ---- Theme ---- */
+  /* 160 ms colour crossfade on every theme change, including the demo (app.js owns its toggle there).
+     The class is added in a MutationObserver callback, i.e. before the next style recalc, so the
+     old → new colours transition. Instant under reduced motion and in ?shot=1 captures. */
+  if (!STILL && "MutationObserver" in window) {
+    var fadeTimer = 0;
+    new MutationObserver(function () {
+      doc.classList.add("theme-fade");
+      clearTimeout(fadeTimer);
+      fadeTimer = setTimeout(function () { doc.classList.remove("theme-fade"); }, 220);
+    }).observe(doc, { attributes: true, attributeFilter: ["data-theme"] });
+  }
   function setTheme(t) {
     doc.dataset.theme = t;
     try { localStorage.setItem("tp-theme", t); } catch (e) {}
@@ -26,23 +37,57 @@
     tbtn.addEventListener("click", function () { setTheme(doc.dataset.theme === "dark" ? "light" : "dark"); });
   }
 
-  /* ---- Header: hairline on scroll, mobile menu ---- */
+  /* ---- Header: hairline on scroll, mobile menu sheet ---- */
   var header = document.querySelector(".site-header");
   if (header) {
     var onScroll = function () { header.classList.toggle("is-scrolled", window.scrollY > 8); };
     onScroll(); window.addEventListener("scroll", onScroll, { passive: true });
     var menuBtn = header.querySelector(".site-menu-btn");
     var nav = header.querySelector(".site-nav");
-    var setMenu = function (open) {
-      header.classList.toggle("is-open", open);
-      menuBtn.setAttribute("aria-expanded", String(open));
-      menuBtn.setAttribute("aria-label", open ? "Close menu" : "Open menu");
-      if (open) { var first = nav.querySelector("a"); if (first) first.focus(); }
-    };
-    if (menuBtn) {
-      menuBtn.addEventListener("click", function () { setMenu(!header.classList.contains("is-open")); });
-      document.addEventListener("keydown", function (e) { if (e.key === "Escape" && header.classList.contains("is-open")) { setMenu(false); menuBtn.focus(); } });
+    if (menuBtn && nav) {
+      /* Full-screen layer = panel (the nav) + scrim. While open every other body child is inert,
+         so Tab stays inside the header, and <html> stops scrolling. */
+      var scrim = document.createElement("div");
+      scrim.className = "site-scrim";
+      scrim.setAttribute("aria-hidden", "true");
+      header.appendChild(scrim);
+      var mq = matchMedia("(max-width: 899.98px)");
+      var isOpen = function () { return header.classList.contains("is-open"); };
+      var setInert = function (on) {
+        Array.prototype.forEach.call(document.body.children, function (el) {
+          if (el === header || el.tagName === "SCRIPT") return;
+          if (on) { el.setAttribute("inert", ""); } else { el.removeAttribute("inert"); }
+        });
+      };
+      var setMenu = function (open, restoreFocus) {
+        if (open && !mq.matches) open = false;
+        header.classList.toggle("is-open", open);
+        doc.classList.toggle("menu-open", open);
+        setInert(open);
+        menuBtn.setAttribute("aria-expanded", String(open));
+        menuBtn.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+        if (open) { var first = nav.querySelector("a"); if (first) first.focus({ preventScroll: true }); }
+        else if (restoreFocus) menuBtn.focus({ preventScroll: true });
+      };
+      menuBtn.addEventListener("click", function () { setMenu(!isOpen(), true); });
+      scrim.addEventListener("click", function () { setMenu(false, true); });
+      nav.addEventListener("click", function (e) { if (isOpen() && e.target.closest("a")) setMenu(false, false); });
+      document.addEventListener("keydown", function (e) { if (e.key === "Escape" && isOpen()) { setMenu(false, true); } });
+      var onMq = function () { if (!mq.matches && isOpen()) setMenu(false, false); };
+      if (mq.addEventListener) mq.addEventListener("change", onMq); else mq.addListener(onMq);
+      window.addEventListener("pageshow", function (e) { if (e.persisted && isOpen()) setMenu(false, false); }); /* back/forward cache */
       if (params.get("menu") === "open") setMenu(true);
+    }
+
+    /* Header CTA rests while the page's own primary CTA ([data-hero-cta]) is in view. */
+    var heroCta = document.querySelector("[data-hero-cta]");
+    var headCta = header.querySelector(".site-cta");
+    if (heroCta && headCta && "IntersectionObserver" in window) {
+      new IntersectionObserver(function (entries) {
+        var vis = entries[0].isIntersecting;
+        headCta.classList.toggle("is-dormant", vis);
+        if (vis) headCta.setAttribute("tabindex", "-1"); else headCta.removeAttribute("tabindex");
+      }, { rootMargin: "-" + 68 + "px 0px 0px 0px" }).observe(heroCta);
     }
   }
 
@@ -65,19 +110,25 @@
   }
 
   /* ---- Split-flap readouts: [data-flap="17:38–17:51"] ---- */
-  function renderFlap(el, text) {
+  /* Tiles are aria-hidden; the readable value is one .sr-only span (aria-label is not allowed on <p>/<span>). */
+  function tiles(el) { return el.querySelectorAll(":scope > .ch, :scope > .sep, :scope > .dash"); }
+  function renderFlap(el, text, label) {
     el.textContent = "";
     for (var i = 0; i < text.length; i++) {
       var c = text[i], s = document.createElement("span");
+      s.setAttribute("aria-hidden", "true");
       if (c === ":" || c === ".") { s.className = "sep"; s.textContent = c; }
       else if (c === "–") { s.className = "dash"; s.textContent = "–"; }
       else { s.className = "ch"; var inner = document.createElement("span"); inner.textContent = c; s.appendChild(inner); }
       el.appendChild(s);
     }
-    el.setAttribute("aria-label", el.dataset.label || text);
+    var sr = document.createElement("span");
+    sr.className = "sr-only";
+    sr.textContent = label || el.dataset.label || text;
+    el.appendChild(sr);
   }
   function flipTo(el, text) {
-    var chs = el.children;
+    var chs = tiles(el);
     if (chs.length !== text.length) { renderFlap(el, text); return; }
     for (var i = 0; i < text.length; i++) {
       (function (node, c, i) {
@@ -97,8 +148,7 @@
   var heroFlap = document.querySelector("[data-flap-intro]");
   if (heroFlap && !STILL) {
     var target = heroFlap.dataset.flap;
-    renderFlap(heroFlap, target.replace(/[0-9]/g, "0"));
-    heroFlap.setAttribute("aria-label", heroFlap.dataset.label || target);
+    renderFlap(heroFlap, target.replace(/[0-9]/g, "0"), heroFlap.dataset.label || target);
     setTimeout(function () { flipTo(heroFlap, target); }, 450);
   }
 
@@ -183,24 +233,36 @@
         classifier: "Status cross-check"
       };
       var rows = data.artifacts.filter(function (item) { return item.file !== "dq_audit_report.json"; });
-      artifactBody.innerHTML = rows.map(function (item) {
+      /* Built with DOM nodes, not innerHTML: file names and hashes come from the API and are never parsed as HTML. */
+      var cell = function (text, cls, title) {
+        var td = document.createElement("td");
+        if (cls) td.className = cls;
+        if (title) td.title = title;
+        td.textContent = text;
+        return td;
+      };
+      artifactBody.replaceChildren.apply(artifactBody, rows.map(function (item) {
         var sha = String(item.sha256 || "");
         var short = sha ? sha.slice(0, 8) + "…" + sha.slice(-6) : "—";
         var size = Number(item.size_bytes);
         var sizeText = size >= 1024 * 1024 ? (size / (1024 * 1024)).toFixed(1) + " MB"
           : size >= 1024 ? (size / 1024).toFixed(1) + " kB" : size + " B";
         var role = roles[item.name] || roles[String(item.file || "").replace(".joblib", "").replace(".json", "")] || item.name || "";
-        return "<tr><td class=\"mono\">" + item.file + "</td><td>" + role + "</td><td class=\"num\">" + sizeText + "</td><td class=\"sha\" title=\"" + sha + "\">" + short + "</td></tr>";
-      }).join("");
+        var tr = document.createElement("tr");
+        tr.append(cell(String(item.file || ""), "mono"), cell(String(role)), cell(sizeText, "num"), cell(short, "sha", sha));
+        return tr;
+      }));
     }
     doc.dataset.evidence = "1";
   }
   if (slots.length || artifactBody) {
+    doc.dataset.evidence = "pending"; /* site.css draws skeleton bars in the slots until this flips */
     fetch("/api/evidence").then(function (response) {
       if (!response.ok) throw new Error(String(response.status));
       return response.json();
     }).then(applyEvidence).catch(function () {
-      slots.forEach(function (el) { el.textContent = "unavailable"; });
+      slots.forEach(function (el) { el.textContent = "unavailable"; el.title = "/api/evidence did not answer"; });
+      if (artifactBody) artifactBody.innerHTML = '<tr><td colspan="4">The artifact inventory could not be loaded from /api/evidence. <a class="link link-inline" href="">Retry</a></td></tr>';
       doc.dataset.evidence = "error";
     });
   }

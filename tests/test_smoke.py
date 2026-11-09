@@ -143,6 +143,15 @@ def test_health_and_simulate_use_frozen_models() -> None:
     assert {path: path.stat().st_mtime_ns for path in artifact_times} == artifact_times
 
 
+def test_unknown_path_returns_the_not_found_page() -> None:
+    with TestClient(app) as client:
+        response = client.get("/not-on-this-route")
+        assert response.status_code == 404
+        assert "Page not found" in response.text
+        assert "This stop" in response.text
+        assert 'href="/vendor/fonts/fonts.css"' in response.text
+
+
 def test_frontend_api_urls_are_relative() -> None:
     script = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
     assert "localhost" not in script

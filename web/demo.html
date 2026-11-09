@@ -6,6 +6,7 @@
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#F3F1EC" id="meta-theme-color">
   <title>Live demo · TransitPulse</title>
+  <meta name="description" content="Live NH-44 corridor demo: arrival windows, confidence and leave-by times for a bus from Jalandhar to Phagwara. Runs on a labelled in-browser stand-in when the model server is unreachable.">
   <script>
     /* Set the theme before first paint: ?theme= (screenshots) > saved choice > OS preference. */
     (function () {
@@ -15,15 +16,16 @@
       var t = q === "light" || q === "dark" ? q : saved === "light" || saved === "dark" ? saved
         : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
       document.documentElement.dataset.theme = t;
+      /* Page state starts at "loading" before first paint, so the first render never shows empty cards (CLS). */
+      document.documentElement.dataset.demo = "loading";
     })();
   </script>
   <link rel="icon" href="assets/logo/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/logo/app-icon.svg">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&family=Geist+Mono:wght@400..600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="css/tokens.css">
+  <link rel="preconnect" href="https://server.arcgisonline.com">
+  <link rel="stylesheet" href="vendor/fonts/fonts.css">
+  <link rel="stylesheet" href="vendor/leaflet-1.9.4/leaflet.css">
+  <link rel="stylesheet" href="css/tokens.css">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="css/chrome.css">
   <link rel="stylesheet" href="css/demo-bridge.css">
@@ -49,7 +51,7 @@
           <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
           <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
         </button>
-        <a class="btn btn-primary" href="/demo">Live demo <span class="arrow" aria-hidden="true">→</span></a>
+        <a class="btn btn-primary site-cta" href="/model">Model card <span class="arrow" aria-hidden="true">→</span></a>
         <button class="site-icon-btn site-menu-btn" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu">
           <svg class="i-menu" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
           <svg class="i-close" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -57,14 +59,20 @@
       </div>
     </div>
   </header>
-  <p class="standin-banner" id="standin-banner" hidden>
-    <strong>Stand-in fallback.</strong> The API is unreachable, so these numbers are an in-browser heuristic, not the trained model.
+  <div class="demo-top" role="region" aria-label="Demo status and views">
+  <!-- Status slot: always in flow and always sized by the longest (stand-in) message, so switching
+       between pending / live / stand-in never moves the page (CLS). -->
+  <p class="standin-banner" id="standin-banner" data-mode="pending" aria-live="polite">
+    <span class="sb-standin"><strong>Stand-in fallback.</strong> The API is unreachable, so these numbers are an in-browser heuristic, not the trained model.</span>
+    <span class="sb-alt sb-pending">Connecting to the model API…</span>
+    <span class="sb-alt sb-live"><strong>Live model.</strong> Predictions come from the trained model via /api/simulate.</span>
+    <span class="sb-alt sb-error"><strong>Corridor data unavailable.</strong> See the message below.</span>
   </p>
   <div class="topbar app-bar">
     <div class="topbar-inner">
       <div class="brand app-title">
         <span class="brand-desc">
-          <span class="brand-product">Live demo · NH-44 delay intelligence</span>
+          <h1 class="brand-product">Live demo · NH-44</h1>
           <span class="brand-route">Jalandhar → Phagwara · bus PB08-BUS-101</span>
         </span>
       </div>
@@ -83,7 +91,7 @@
           <span class="sync-dot" aria-hidden="true"></span>
           <span id="sync-label">Connecting</span>
         </div>
-        <div class="clock" aria-label="Local time, IST">
+        <div class="clock" role="group" aria-label="Local time, IST">
           <span class="clock-label">IST</span>
           <time id="live-clock">--:--:--</time>
         </div>
@@ -92,27 +100,37 @@
     </div>
   </div>
 
+  </div>
   <main class="main" id="main">
+    <section class="card demo-error" id="demo-error" role="alert" aria-labelledby="demo-error-title" hidden>
+      <span class="label">Corridor service</span>
+      <h2 id="demo-error-title">The demo could not reach the corridor service.</h2>
+      <p>Nothing below is current. Check your connection, then retry. If the model server is down, the in-browser stand-in still runs, clearly labelled.</p>
+      <div class="demo-error-actions">
+        <button class="btn btn-primary" id="demo-retry" type="button">Retry</button>
+        <a class="btn btn-secondary" href="/demo?standin=1">Use the stand-in model</a>
+      </div>
+    </section>
     <!-- ============================================================ LIVE -->
     <section class="view view-live" id="view-live" role="tabpanel" aria-labelledby="tab-live">
       <div class="kpis area-kpis" aria-label="Corridor summary">
         <article class="kpi">
-          <h3 class="label">Corridor delay</h3>
+          <h2 class="label">Corridor delay</h2>
           <p class="kpi-value"><span class="num" id="stat-delay">--</span><span class="unit">min</span></p>
           <p class="kpi-foot" id="stat-delay-foot">Awaiting inference</p>
         </article>
         <article class="kpi">
-          <h3 class="label">Fleet confidence</h3>
+          <h2 class="label">Fleet confidence</h2>
           <p class="kpi-value"><span class="num" id="stat-confidence">--</span><span class="unit">%</span></p>
           <p class="kpi-foot" id="stat-confidence-foot">80% quantile envelope</p>
         </article>
         <article class="kpi kpi-eta">
-          <h3 class="label">Next stop ETA</h3>
-          <p class="kpi-value"><span class="flap flap-sm" id="stat-eta" aria-live="off">--</span><span class="unit">min</span></p>
+          <h2 class="label">Next stop ETA</h2>
+          <p class="kpi-value"><span class="flap flap-sm" id="stat-eta" aria-hidden="true">--</span><span class="sr-only" id="stat-eta-sr">not loaded</span><span class="unit">min</span></p>
           <p class="kpi-foot" id="stat-eta-foot">Next stop</p>
         </article>
         <article class="kpi">
-          <h3 class="label">Live status</h3>
+          <h2 class="label">Live status</h2>
           <p class="kpi-value kpi-status"><span class="status-dot" id="stat-status-dot" aria-hidden="true"></span><span id="stat-status">--</span></p>
           <p class="kpi-foot" id="stat-status-foot">Classifier output</p>
         </article>
@@ -136,7 +154,12 @@
           </div>
         </header>
         <div class="map-wrap" id="map-wrap">
-          <div id="map" aria-label="Map of the NH-44 corridor from Jalandhar to Phagwara with live bus position"></div>
+          <div id="map" role="region" aria-label="Map of the NH-44 corridor from Jalandhar to Phagwara with live bus position"></div>
+          <!-- Skeleton: the corridor drawn from the stand-in geometry, shown until the map and first result arrive -->
+          <svg class="map-skeleton" viewBox="0 0 600 300" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+            <polyline points="116.5,40 172.9,55.9 209.9,73.9 293,144.7 348.2,184.6 483.5,260"/>
+            <g><circle cx="116.5" cy="40" r="6"/><circle cx="172.9" cy="55.9" r="6"/><circle cx="209.9" cy="73.9" r="6"/><circle cx="293" cy="144.7" r="6"/><circle cx="348.2" cy="184.6" r="6"/><circle cx="483.5" cy="260" r="6"/></g>
+          </svg>
           <div class="map-fallback" id="map-fallback" hidden></div>
         </div>
         <dl class="telemetry" id="telemetry">
@@ -175,7 +198,7 @@
           <div class="eta-hero">
             <span class="eta-kicker" id="eta-kicker">Arrives in</span>
             <div class="eta-figure">
-              <span class="flap flap-lg" id="eta-value">--</span><span class="unit">min</span>
+              <span class="flap flap-lg" id="eta-value" aria-hidden="true">--</span><span class="sr-only" id="eta-value-sr">not loaded</span><span class="unit">min</span>
             </div>
             <div class="eta-delta">
               <span class="status-chip" id="eta-status">--</span>
@@ -235,18 +258,18 @@
             <li><i class="swatch severe"></i><b class="mono" id="count-severe">0</b> Severe</li>
           </ul>
         </header>
-        <div class="seg-table" role="table" aria-label="Segments">
-          <div class="seg-row seg-head" role="row">
-            <span role="columnheader">Seg</span>
-            <span role="columnheader">Route</span>
-            <span role="columnheader" class="r">Sched</span>
-            <span role="columnheader" class="r">ETA</span>
-            <span role="columnheader" class="r">Delay</span>
-            <span role="columnheader">80% window</span>
-            <span role="columnheader">Status</span>
-            <span role="columnheader">Confidence</span>
+        <div class="seg-table">
+          <div class="seg-row seg-head" aria-hidden="true">
+            <span>Seg</span>
+            <span>Route</span>
+            <span class="r">Sched</span>
+            <span class="r">ETA</span>
+            <span class="r">Delay</span>
+            <span>80% window</span>
+            <span>Status</span>
+            <span>Confidence</span>
           </div>
-          <div id="segment-list" role="rowgroup"></div>
+          <div id="segment-list" role="group" aria-label="Segments: select one to inspect it"></div>
         </div>
       </section>
 
@@ -261,7 +284,7 @@
             <span class="sheet-summary mono" id="sheet-summary">13:00 · Clear</span>
             <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>
           </button>
-          <button class="btn btn-quiet play-btn" id="play-toggle" type="button" aria-pressed="true">
+          <button class="btn btn-quiet play-btn" id="play-toggle" type="button" aria-label="Pause bus">
             <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12M15 6v12"/></svg>
             <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6v12l10-6-10-6Z"/></svg>
             <span id="play-label">Pause bus</span>
@@ -417,17 +440,43 @@
     </section>
   </main>
 
-  <footer class="footer">
-    <span>TransitPulse AI · Public transport tracking &amp; real-time delay prediction</span>
-    <span id="footer-mode">Live simulation · FastAPI + scikit-learn</span>
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="site-footer-grid">
+        <div class="foot-brand">
+          <img class="on-light" src="assets/logo/lockup-light.svg" alt="TransitPulse" width="156" height="48">
+          <img class="on-dark" src="assets/logo/lockup-dark.svg" alt="TransitPulse" width="156" height="48">
+          <p class="foot-note">Honest arrival windows for Punjab's tier-2 and intercity buses. A Smart India Hackathon prototype (SIH25013).</p>
+        </div>
+        <div><h2>Product</h2><ul>
+          <li><a href="/how-it-works">How it works</a></li>
+          <li><a href="/demo">Live demo</a></li>
+          <li><a href="/demo?view=evaluator">Evaluator view</a></li>
+        </ul></div>
+        <div><h2>Evidence</h2><ul>
+          <li><a href="/model">Model &amp; evaluation</a></li>
+          <li><a href="/model#caveats">Caveats</a></li>
+          <li><a href="/model#artifacts">Artifacts</a></li>
+        </ul></div>
+        <div><h2>Project</h2><ul>
+          <li><a href="/about">About &amp; roadmap</a></li>
+          <li><a href="/about#contact">Contact</a></li>
+          <li><a href="https://github.com/utkarsh777-wins/TransitPulse" rel="noreferrer">Source on GitHub</a></li>
+        </ul></div>
+      </div>
+      <div class="site-footer-bottom">
+        <span class="foot-mode" id="footer-mode">Live model · FastAPI + scikit-learn</span>
+        <span>NH-44 · Jalandhar → Phagwara · IST</span>
+      </div>
+    </div>
   </footer>
 
   <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="standin.js"></script>
-  <script src="app.js"></script>
-  <script src="js/site.js"></script>
+  <script defer src="vendor/leaflet-1.9.4/leaflet.js"></script>
+  <script defer src="standin.js"></script>
+  <script defer src="app.js"></script>
+  <script defer src="js/site.js"></script>
 </body>
 </html>

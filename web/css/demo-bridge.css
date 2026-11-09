@@ -1,23 +1,148 @@
-/* Bridges the theme-v2 dashboard (demo/styles.css) into the site shell.
-   The site header scrolls away; the dashboard's own app bar stays sticky. */
+/* Bridges the theme-v2 dashboard (styles.css) into the site shell.
+   The site header scrolls away on /demo (position: relative): the dashboard's own app bar is the
+   sticky layer there, and two stacked sticky bars would eat a phone screen. */
+
+/* ---- r2: one ramp, one radius scale (theme-v2 tokens mapped onto the site system) ---- */
+:root {
+  --t-sm: 0.875rem;                                     /* 13 → 14 */
+  --t-lg: 1.25rem;                                      /* 17–20 → 20 */
+  --t-xl: clamp(1.25rem, 1.1rem + .5vw, 1.5rem);        /* 22–30 → 20–24 */
+  --t-kpi: clamp(1.5rem, 1.05rem + 1.5vw, 2.25rem);     /* 28–38 → 24–36 */
+  --t-hero: clamp(2.25rem, 1.5rem + 2.5vw, 3.5rem);     /* 40–56 → 36–56 */
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
+  --card-pad: 16px; --page-x: 12px; --gap: 12px;   /* stepped: 12/16/20 · 12/24/40 · 16/20/24 */
+}
+@media (min-width: 600px) { :root { --card-pad: 20px; --page-x: 24px; --gap: 16px; } }
+@media (min-width: 1200px) { :root { --card-pad: 24px; --page-x: 40px; --gap: 20px; } }
+[data-theme="light"], :root { --focus: #B83A0B; }
+[data-theme="dark"] { --focus: #FF7A45; }
+
 body[data-app] .site-header { position: relative; border-bottom: 1px solid var(--line); }
 body[data-app] .site-header .wrap { max-width: none; padding-inline: var(--page-x); }
 body[data-app] .app-bar .app-title .brand-desc { padding-left: 0; border-left: 0; }
 body[data-app] .app-bar .topbar-inner { min-height: 60px; }
+body[data-app] h1.brand-product { margin: 0; font-size: var(--t-md); font-weight: 600; line-height: 1.3; }
 @media (max-width: 639.98px) {
-  body[data-app] .app-bar .topbar-inner { grid-template-areas: "tabs meta"; grid-template-columns: 1fr auto; padding-block: var(--s-2); }
-  body[data-app] .app-bar .app-title { display: none; }
+  body[data-app] .app-bar .topbar-inner { grid-template-areas: "tabs meta"; grid-template-columns: minmax(0, 1fr) auto; padding-block: var(--s-2); }
+  /* the H1 stays in the accessibility tree on phones, visually hidden to keep the readout high */
+  body[data-app] .app-bar .app-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  body[data-app] .app-bar .app-title .brand-desc { display: block; } /* theme-v2 sets display:none here, which removed the H1 */
   body[data-app] .app-bar .view-tabs { justify-self: stretch; }
 }
 
-/* 44px minimum targets (site-wide rule), applied to the theme-v2 controls
-   without changing their visual weight. */
+/* 44 px minimum targets, applied to theme-v2 controls without changing their visual weight. */
 body[data-app] .view-tab { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
 body[data-app] .icon-btn { width: 44px; height: 44px; }
 body[data-app] .seg-btn { min-height: 44px; }
+body[data-app] .play-btn { min-height: 44px; min-width: 44px; }
 body[data-app] .range, body[data-app] .range input { height: 44px; }
 body[data-app] .leaflet-control-zoom a { width: 44px !important; height: 44px !important; line-height: 42px !important; font-size: 20px !important; }
+/* Bus marker: 44 × 44 hit area (Leaflet icon box), visual tile stays 26 px and centred. */
+body[data-app] .bus-anchor { display: grid; place-items: center; border-radius: var(--r-md); }
+body[data-app] .bus-anchor .bus-marker { inset: auto; position: relative; width: 26px; height: 26px; border-radius: var(--r-sm); }
 @media (max-width: 379.98px) {
   body[data-app] .app-bar .clock { display: none; }
   body[data-app] .app-bar .topbar-inner { gap: var(--s-2); }
 }
+
+/* ---- Honest status pill: a short text label survives on phones (12 px, never a bare dot) ---- */
+.sync-pill[data-state="error"] { color: var(--severe); border-color: color-mix(in srgb, var(--severe) 40%, var(--line)); }
+.sync-pill[data-state="error"] .sync-dot { background: var(--severe); }
+.sync-pill[data-state="offline"] { color: var(--fg-2); border-color: var(--line-strong); }
+.sync-pill[data-state="offline"] .sync-dot { background: var(--fg-3); animation: none; }
+@media (max-width: 639.98px) {
+  body[data-app] .sync-pill { width: auto; height: 28px; padding: 0 8px; gap: 4px; border: 1px solid var(--line); border-radius: var(--r-full); font-size: var(--t-xs); font-weight: 500; }
+  body[data-app] .sync-pill #sync-label { display: inline; position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  body[data-app] .sync-pill::after { content: "Live"; }
+  body[data-app] .sync-pill[data-state="busy"]::after { content: "Updating"; }
+  body[data-app] .sync-pill[data-state="standin"]::after { content: "Stand-in"; }
+  body[data-app] .sync-pill[data-state="error"]::after { content: "Error"; }
+  body[data-app] .sync-pill[data-state="offline"]::after { content: "Offline"; }
+  body[data-app] .sync-pill[data-state="standin"] { border-color: color-mix(in srgb, var(--moderate) 45%, var(--line)); }
+}
+
+/* ---- Stand-in banner: weight on the ramp (was 650) ---- */
+.standin-banner { padding: 8px var(--page-x); max-width: none; } /* PR #2 bug: theme-v2 caps every <p> at 68ch */
+.standin-banner strong { font-weight: 600; }
+
+/* ---- Phone order: the rider readout first, then map, KPIs, segments (readout was ~815 px down at 390) ---- */
+@media (max-width: 639.98px) {
+  body[data-app] .view-live { grid-template-areas: "rail" "map" "kpis" "segments" "controls"; --map-h: clamp(260px, 44svh, 360px); }
+  body[data-view="live"] .site-footer { padding-bottom: calc(var(--sheet-peek) + 40px + env(safe-area-inset-bottom)); }
+}
+/* KPI cells stack when a cell would be narrower than ~9 characters of its own text (200% text). */
+body[data-app] .kpis { grid-template-columns: repeat(auto-fit, minmax(min(100%, 10em), 1fr)); }
+@media (min-width: 900px) { body[data-app] .kpis { grid-template-columns: repeat(auto-fit, minmax(min(100%, 12em), 1fr)); } }
+body[data-app] .kpi, body[data-app] .kpi-value { min-width: 0; }
+body[data-app] .kpi-value { flex-wrap: wrap; }
+
+/* ---- Page states (app.js sets html[data-demo]) ---- */
+.map-skeleton { display: none; }
+html[data-demo="skeleton"] .map-skeleton, html[data-demo="loading"] .map-skeleton { display: block; position: absolute; inset: 0; width: 100%; height: 100%; z-index: 400; background: var(--surface-2); pointer-events: none; }
+.map-skeleton polyline { fill: none; stroke: var(--line-strong); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.map-skeleton circle { fill: var(--surface); stroke: var(--line-strong); stroke-width: 3; }
+html[data-demo="loading"] .map-skeleton { opacity: 0; }
+html[data-demo="skeleton"] .kpi-value .num,
+html[data-demo="skeleton"] .kpi-value .flap,
+html[data-demo="skeleton"] #stat-status,
+html[data-demo="skeleton"] #eta-value,
+html[data-demo="skeleton"] #eta-title,
+html[data-demo="skeleton"] .kpi-foot,
+html[data-demo="skeleton"] .eta-delta-text,
+html[data-demo="skeleton"] #confidence-badge { color: transparent !important; background: var(--surface-3) !important; border-radius: var(--r-xs); border-color: transparent !important; }
+html[data-demo="skeleton"] #eta-value { display: inline-block; min-width: 3.5ch; min-height: 1em; }
+html[data-demo="skeleton"] .kpi-value .num { display: inline-block; min-width: 2.5ch; }
+html[data-demo="skeleton"] .kpi-value .unit, html[data-demo="skeleton"] .eta-figure .unit, html[data-demo="skeleton"] .status-dot { visibility: hidden; }
+@media (prefers-reduced-motion: no-preference) {
+  html[data-demo="skeleton"] .kpi-value .num, html[data-demo="skeleton"] #eta-value, html[data-demo="skeleton"] .map-skeleton polyline { animation: tp-pulse 1.4s ease-in-out infinite; }
+}
+@keyframes tp-pulse { 50% { opacity: .55; } }
+.demo-error { display: grid; gap: 12px; max-width: 44rem; margin: 0 auto var(--gap); border-color: color-mix(in srgb, var(--severe) 40%, var(--line)); }
+.demo-error[hidden] { display: none; }
+.demo-error h2 { margin: 0; font-size: var(--t-lg); font-weight: 600; line-height: 1.3; }
+.demo-error p { margin: 0; color: var(--fg-2); }
+.demo-error-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 4px; }
+/* Error: nothing stale is shown — the card is the page until Retry succeeds. */
+html[data-demo="error"] .view-live, html[data-demo="error"] .view-eval { display: none !important; }
+html[data-demo="error"] .demo-error { margin-top: var(--gap); }
+
+/* ---- Site footer replaces the dashboard footer ---- */
+body[data-app] .site-footer { margin-top: 0; }
+
+/* ---- Reflow at 200% text, 320 px: nothing in the dashboard chrome may force sideways scroll ---- */
+body[data-app] .view-tabs, body[data-app] .view-tab, body[data-app] .topbar-meta, body[data-app] .telemetry > div, body[data-app] .telemetry dd { min-width: 0; }
+body[data-app] .view-tab { white-space: normal; text-align: center; line-height: 1.2; }
+body[data-app] .telemetry dd, body[data-app] .telemetry dd *, body[data-app] .tel-route { white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+@media (max-width: 639.98px) {
+  body[data-app] .app-bar .topbar-inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+  body[data-app] .app-bar .view-tabs { flex: 1 1 12rem; }
+  body[data-app] .app-bar .topbar-meta { flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-end; }
+}
+body[data-app] .xai-row > * { min-width: 0; }
+.demo-top { display: contents; }
+body[data-app] .xai-axis-labels { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); white-space: normal; }
+@media (max-width: 639.98px) { body[data-app] .app-bar .app-title .brand-route { display: none; } }
+
+/* r2 measurement leftovers */
+.kpi-status { font-size: var(--fs-20); }               /* was clamp(22px…30px): off the ramp */
+@media (min-width: 840px) { .kpi-status { font-size: var(--fs-24); } }
+#recenter-map, .icon-btn { padding: 0; }                /* UA 1px 6px button padding */
+
+/* Status slot (CLS fix): the stand-in sentence always reserves the height; other states overlay it. */
+.standin-banner { position: relative; }
+.standin-banner .sb-alt { position: absolute; inset: 8px var(--page-x); display: none; align-items: center; }
+.standin-banner:not([data-mode="standin"]) .sb-standin { visibility: hidden; }
+.standin-banner[data-mode="pending"] .sb-pending,
+.standin-banner[data-mode="live"] .sb-live { display: flex; flex-wrap: wrap; gap: 0 .3em; }
+html[data-demo="error"] .standin-banner:not([data-mode="standin"]) .sb-alt { display: none; }
+html[data-demo="error"] .standin-banner:not([data-mode="standin"]) .sb-error { display: flex; flex-wrap: wrap; gap: 0 .3em; }
+.standin-banner .sb-live strong { color: var(--ok, var(--fg)); }
+.standin-banner:not([data-mode="standin"]) { background: var(--surface-2); }
+.standin-banner[data-mode="live"] .sb-live strong { color: var(--fg); }
+
+
+/* CLS: during the first ≤300 ms ("loading", set in <head>) the views are laid out but not painted, so
+   filling in values never moves visible content. The animation is a no-JS safety net: it reveals the
+   page after 1.2 s even if app.js never runs. */
+html[data-demo="loading"] main { visibility: hidden; animation: tp-reveal 0s linear 1.2s forwards; }
+@keyframes tp-reveal { to { visibility: visible; } }
