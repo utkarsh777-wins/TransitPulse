@@ -16,12 +16,17 @@ import json
 import sys
 from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.peak import is_peak
+
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, r2_score
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MODELS_DIR = PROJECT_ROOT / "models"
 CLEAN_DATA_PATH = PROJECT_ROOT / "data" / "processed" / "phase1_cleaned_transit_dataset.csv"
 METADATA_PATH = MODELS_DIR / "model_metadata.json"
@@ -91,7 +96,14 @@ def measure_coverage(test: pd.DataFrame) -> dict:
     point = regressor.predict(features)
     raw_lower = lower_model.predict(features)
     raw_upper = upper_model.predict(features)
-    peak = test["is_peak_hour"].to_numpy(dtype=int)
+    peak = np.fromiter(
+        (
+            is_peak(int(hour), is_weekend=bool(weekend))
+            for hour, weekend in zip(test["hour_of_day"].to_numpy(), test["is_weekend"].to_numpy(), strict=True)
+        ),
+        dtype=int,
+        count=len(test),
+    )
     lower, upper = published_interval(point, raw_lower, raw_upper, peak)
     actual = test["delay_minutes"].to_numpy(dtype=float)
     peak_mask = peak == 1

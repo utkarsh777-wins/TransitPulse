@@ -16,6 +16,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from src.peak import is_peak
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MODELS_DIR = PROJECT_ROOT / "models"
 WEB_DIR = PROJECT_ROOT / "web"
@@ -140,10 +142,6 @@ class SimulationRequest(BaseModel):
 
 def clamp(value: float, lower: float, upper: float) -> float:
     return max(lower, min(upper, value))
-
-
-def is_peak(hour_of_day: int) -> bool:
-    return 8 <= hour_of_day <= 10 or 17 <= hour_of_day <= 19
 
 
 def historical_average(segment: dict[str, Any], peak: bool) -> float:
@@ -314,7 +312,7 @@ def rider_recommendation(
 
 
 def segment_inference(models: dict[str, Any], request: SimulationRequest) -> dict[str, Any]:
-    peak = is_peak(request.hour_of_day)
+    peak = is_peak(request.hour_of_day, is_weekend=request.is_weekend)
     rows = [feature_row(segment, request, peak) for segment in SEGMENTS]
     predictions = predict_rows(models, rows)
 
@@ -415,18 +413,11 @@ def segment_inference(models: dict[str, Any], request: SimulationRequest) -> dic
         ]
 
         cumulative_delay += point_delay
-        # Leave-by is the published window start (scheduled time + lower delay
-        # bound, in minutes from now) minus the rider's walk time.
-        window_start_min = round(max(segment["scheduled_time_min"] + lower, 0.0), 1)
-        leave_by_min = round(window_start_min - request.walk_time_min, 1)
         segment_payload = {
             **build_segment_record(segment),
             "predicted_delay_min": point_delay,
             "lower_bound_min": lower,
             "upper_bound_min": upper,
-            "window_start_min": window_start_min,
-            "walk_time_min": request.walk_time_min,
-            "leave_by_min": leave_by_min,
             "interval_width_min": width,
             "delay_status": status,
             "status_color": STATUS_COLORS[status],
@@ -456,6 +447,14 @@ def segment_inference(models: dict[str, Any], request: SimulationRequest) -> dic
         cumulative_scheduled += segment["scheduled_time_min"]
         segment_payload["scheduled_arrival_offset_min"] = round(cumulative_scheduled, 2)
         segment_payload["estimated_arrival_offset_min"] = round(cumulative_scheduled + cumulative_delay, 2)
+        # Arrival at this stop along the whole trip, then walk time earlier.
+        window_start_min = round(
+            segment_payload["scheduled_arrival_offset_min"] + segment_payload["cumulative_delay_min"],
+            1,
+        )
+        segment_payload["window_start_min"] = window_start_min
+        segment_payload["walk_time_min"] = request.walk_time_min
+        segment_payload["leave_by_min"] = round(window_start_min - request.walk_time_min, 1)
         total_confidence_weight += confidence * segment["scheduled_time_min"]
         segments_payload.append(segment_payload)
 

@@ -119,6 +119,27 @@ def test_health_and_simulate_use_frozen_models() -> None:
         assert custom_segment["window_start_min"] == default_segment["window_start_min"]
         assert custom_segment["leave_by_min"] == pytest.approx(custom_segment["window_start_min"] - 12.0, abs=0.05)
 
+        later = default_sim.json()["segments"][-1]
+        assert later["segment_id"] == 5
+        cumulative_arrival = later["scheduled_arrival_offset_min"] + later["cumulative_delay_min"]
+        assert later["window_start_min"] == pytest.approx(round(cumulative_arrival, 1), abs=0.05)
+        assert later["leave_by_min"] == pytest.approx(later["window_start_min"] - 5.0, abs=0.05)
+        assert later["window_start_min"] > later["scheduled_time_min"] + 20
+
+        zero = client.post("/api/simulate", json={**SIMULATION, "walk_time_min": 0})
+        assert zero.status_code == 200
+        zero_segment = zero.json()["segments"][-1]
+        assert zero_segment["leave_by_min"] == pytest.approx(zero_segment["window_start_min"], abs=0.05)
+
+        assert client.post("/api/simulate", json={**SIMULATION, "walk_time_min": -1}).status_code == 422
+        assert client.post("/api/simulate", json={**SIMULATION, "walk_time_min": 30.1}).status_code == 422
+        assert client.post("/api/simulate", json={**SIMULATION, "walk_time_min": "x"}).status_code == 422
+
+        omitted = {key: value for key, value in SIMULATION.items() if key != "walk_time_min"}
+        default_walk = client.post("/api/simulate", json=omitted)
+        assert default_walk.status_code == 200
+        assert default_walk.json()["simulation"]["walk_time_min"] == 5.0
+
     assert {path: path.stat().st_mtime_ns for path in artifact_times} == artifact_times
 
 

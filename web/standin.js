@@ -31,7 +31,7 @@
 
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const r2 = (v) => Math.round(v * 100) / 100;
-  const isPeak = (h) => (h >= 8 && h <= 10) || (h >= 17 && h <= 19);
+  const isPeak = (h, weekend) => (weekend ? h >= 16 && h <= 19 : (h >= 8 && h <= 10) || (h >= 17 && h <= 19));
   const signed = (v, d = 1) => { const s = Number(v).toFixed(d); return Number(s) > 0 ? `+${s}` : Number(s) === 0 ? (0).toFixed(d) : s.replace("-", "−"); };
   const esc = (v) => String(v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]));
   const statusKey = (s) => (s === "Severe Delay" ? "severe" : s === "Moderate Delay" ? "moderate" : "ontime");
@@ -60,7 +60,7 @@
   /* Heuristic stand-in for the RandomForest + quantile models, decomposed the same way app.py does (leave-one-out). */
   const BASE_C = [-0.2, 0.3, 0.65, 0.45, 1.2];
   function simulate(req) {
-    const peak = isPeak(req.hour_of_day);
+    const peak = isPeak(req.hour_of_day, Boolean(req.is_weekend));
     const w = req.weather_severity, lag = req.rolling_3trip_delay_min, dwell = req.prev_stop_dwell_sec, spd = req.gps_speed_kmh;
     let cumDelay = 0, cumSched = 0, confW = 0, worst = 0;
     const segs = segments.map((seg, i) => {
@@ -97,13 +97,15 @@
         simulated_speed_kmh: Math.round(clamp(0.65 * spd + 0.35 * segSpeed, 5, 85) * 10) / 10,
         estimated_segment_time_min: r2(sched + Math.max(pred, 0)),
         scheduled_start_offset_min: r2(cumSched), cumulative_delay_min: r2(cumDelay),
-        window_start_min: r2(Math.max(sched + lower, 0)),
-        walk_time_min: Number(req.walk_time_min ?? 5),
-        leave_by_min: r2(Math.max(sched + lower, 0) - Number(req.walk_time_min ?? 5)),
       };
       cumSched += sched;
       out.scheduled_arrival_offset_min = r2(cumSched);
       out.estimated_arrival_offset_min = r2(cumSched + cumDelay);
+      const walk = Number(req.walk_time_min ?? 5);
+      const windowStart = Math.round((out.scheduled_arrival_offset_min + out.cumulative_delay_min) * 10) / 10;
+      out.window_start_min = windowStart;
+      out.walk_time_min = walk;
+      out.leave_by_min = Math.round((windowStart - walk) * 10) / 10;
       confW += conf * sched;
       return out;
     });
