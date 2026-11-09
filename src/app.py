@@ -12,7 +12,7 @@ import joblib
 import pandas as pd
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -658,6 +658,12 @@ def diagnostics() -> dict[str, Any]:
             "generated_at": datetime.now(timezone.utc).isoformat(),
         },
     }
+
+
+@app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
+def api_not_found(path: str) -> JSONResponse:
+    """Unknown /api paths stay JSON. The HTML 404 is only for pages."""
+    return JSONResponse(status_code=404, content={"detail": "Not Found"})
 
 
 if ASSETS_DIR.is_dir():

@@ -517,7 +517,7 @@ function initMap(corridor) {
     const coords = [[segment.start_lat, segment.start_lon], [segment.end_lat, segment.end_lon]];
     const casing = L.polyline(coords, { color: cssVar("--map-casing"), weight: 10, opacity: 1, lineCap: "round", interactive: false }).addTo(state.map);
     const main = L.polyline(coords, { color: cssVar("--ontime"), weight: 5, opacity: 1, lineCap: "round", className: "route-line" }).addTo(state.map);
-    main.bindTooltip(`SEG ${String(segment.segment_id).padStart(2, "0")} · ${routeName(segment.name)} · ${segment.distance_km} km`, { sticky: true, className: "tp-tip" });
+    main.bindTooltip(`SEG ${String(segment.segment_id).padStart(2, "0")} · ${escapeHtml(routeName(segment.name))} · ${segment.distance_km} km`, { sticky: true, className: "tp-tip" });
     main.on("click", () => selectSegment(segment.segment_id));
     state.segmentLayers[segment.segment_id] = { casing, main };
   });

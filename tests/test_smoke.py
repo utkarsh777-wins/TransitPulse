@@ -143,6 +143,17 @@ def test_health_and_simulate_use_frozen_models() -> None:
     assert {path: path.stat().st_mtime_ns for path in artifact_times} == artifact_times
 
 
+def test_unknown_api_path_returns_json_not_found() -> None:
+    with TestClient(app) as client:
+        response = client.get("/api/nope")
+        assert response.status_code == 404
+        assert response.headers["content-type"].startswith("application/json")
+        assert response.json() == {"detail": "Not Found"}
+        health = client.get("/api/health")
+        assert health.status_code == 200
+        assert health.json()["service"] == "TransitPulse AI"
+
+
 def test_unknown_path_returns_the_not_found_page() -> None:
     with TestClient(app) as client:
         response = client.get("/not-on-this-route")
