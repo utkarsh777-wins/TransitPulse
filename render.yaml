@@ -1,0 +1,16 @@
+# TransitPulse AI — Render Blueprint
+# Python 3.11.18 is set here and in .python-version. Do not set PORT;
+# Render injects it and the start command passes it to uvicorn.
+services:
+  - type: web
+    name: transitpulse
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.18"
+      - key: HOST
+        value: "0.0.0.0"

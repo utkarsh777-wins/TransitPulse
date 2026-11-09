@@ -1,7 +1,12 @@
 venv
+.venv/
 __pycache__/
 *.pyc
 .pytest_cache/
+*.zip
+theme-v2/
+web_backup_old/
+shots_live/
 
 # Agent loop files
 PROMPT.md

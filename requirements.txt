@@ -1,7 +1,10 @@
-fastapi>=0.116
-uvicorn[standard]>=0.35
-pandas>=2.2
-numpy>=1.26
-scikit-learn>=1.5
-joblib>=1.4
-matplotlib>=3.8
+# Runtime dependencies for the FastAPI service.
+# Render installs this file only. Notebook-only packages are in requirements-notebooks.txt.
+# scikit-learn is pinned to the version stored in models/*.joblib (_sklearn_version 1.9.1).
+fastapi==0.162.2
+uvicorn[standard]==0.54.0
+pandas==3.1.1
+numpy==2.4.6
+scikit-learn==1.9.1
+joblib==1.6.0
+matplotlib==3.11.2
