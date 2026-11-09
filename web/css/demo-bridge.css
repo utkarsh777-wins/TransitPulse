@@ -1,0 +1,23 @@
+/* Bridges the theme-v2 dashboard (demo/styles.css) into the site shell.
+   The site header scrolls away; the dashboard's own app bar stays sticky. */
+body[data-app] .site-header { position: relative; border-bottom: 1px solid var(--line); }
+body[data-app] .site-header .wrap { max-width: none; padding-inline: var(--page-x); }
+body[data-app] .app-bar .app-title .brand-desc { padding-left: 0; border-left: 0; }
+body[data-app] .app-bar .topbar-inner { min-height: 60px; }
+@media (max-width: 639.98px) {
+  body[data-app] .app-bar .topbar-inner { grid-template-areas: "tabs meta"; grid-template-columns: 1fr auto; padding-block: var(--s-2); }
+  body[data-app] .app-bar .app-title { display: none; }
+  body[data-app] .app-bar .view-tabs { justify-self: stretch; }
+}
+
+/* 44px minimum targets (site-wide rule), applied to the theme-v2 controls
+   without changing their visual weight. */
+body[data-app] .view-tab { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+body[data-app] .icon-btn { width: 44px; height: 44px; }
+body[data-app] .seg-btn { min-height: 44px; }
+body[data-app] .range, body[data-app] .range input { height: 44px; }
+body[data-app] .leaflet-control-zoom a { width: 44px !important; height: 44px !important; line-height: 42px !important; font-size: 20px !important; }
+@media (max-width: 379.98px) {
+  body[data-app] .app-bar .clock { display: none; }
+  body[data-app] .app-bar .topbar-inner { gap: var(--s-2); }
+}

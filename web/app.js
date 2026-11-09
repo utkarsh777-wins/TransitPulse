@@ -21,10 +21,11 @@ const dom = {
   etaCard: $("eta-card"), peakAlert: $("peak-alert"), etaTitle: $("eta-title"), confidenceBadge: $("confidence-badge"),
   etaKicker: $("eta-kicker"), etaValue: $("eta-value"), etaStatus: $("eta-status"), etaMeta: $("eta-meta"),
   etaRange: $("eta-range"), etaRangeValue: $("eta-range-value"), rangeBar: $("range-bar"), rangeSched: $("range-sched"), rangeMax: $("range-max"),
-  recommendation: $("recommendation"), etaSegmentName: $("eta-segment-name"), etaClassifier: $("eta-classifier"), etaWindow: $("eta-window"),
+  recommendation: $("recommendation"), etaSegmentName: $("eta-segment-name"), etaClassifier: $("eta-classifier"), etaWindow: $("eta-window"), etaLeave: $("eta-leave"),
   xaiSegment: $("xai-segment"), xaiBars: $("xai-bars"), xaiBaseline: $("xai-baseline"), xaiSum: $("xai-sum"),
   segmentList: $("segment-list"),
   timeSlider: $("time-slider"), timeValue: $("time-value"), peakFlag: $("peak-flag"), weatherValue: $("weather-value"),
+  walkSlider: $("walk-slider"), walkValue: $("walk-value"),
   weatherButtons: Array.from(document.querySelectorAll(".weather-btn")),
   lagSlider: $("lag-slider"), lagValue: $("lag-value"), dwellSlider: $("dwell-slider"), dwellValue: $("dwell-value"),
   speedSlider: $("speed-slider"), speedValue: $("speed-value"),
@@ -59,7 +60,7 @@ const PRESET_LABELS = { midday: "Midday Clear", rush: "Morning Rush + Rain", eve
 const startPreset = PRESETS[params.get("preset")] ? params.get("preset") : "midday";
 const state = {
   corridor: null, result: null, diagnostics: null,
-  simulation: { ...PRESETS[startPreset] }, activePreset: startPreset,
+  simulation: { ...PRESETS[startPreset], walk_time_min: 5 }, activePreset: startPreset,
   selectedSegmentId: Number(params.get("seg")) || 1,
   playing: !SHOT && params.get("paused") !== "1",
   requestSeq: 0, debounceTimer: null, toastTimer: null,
@@ -223,6 +224,7 @@ function updateControlLabels() {
   dom.lagValue.textContent = Number(s.rolling_3trip_delay_min).toFixed(1);
   dom.dwellValue.textContent = String(Math.round(s.prev_stop_dwell_sec));
   dom.speedValue.textContent = String(Math.round(s.gps_speed_kmh));
+  if (dom.walkValue) dom.walkValue.textContent = String(Math.round(s.walk_time_min ?? 5));
   const preset = state.activePreset ? PRESET_LABELS[state.activePreset] : "Custom";
   dom.sheetSummary.textContent = `${preset} · ${String(hour).padStart(2, "0")}:00`;
 }
@@ -231,11 +233,12 @@ function syncControlsFromState() {
   dom.lagSlider.value = String(state.simulation.rolling_3trip_delay_min);
   dom.dwellSlider.value = String(state.simulation.prev_stop_dwell_sec);
   dom.speedSlider.value = String(state.simulation.gps_speed_kmh);
+  if (dom.walkSlider) dom.walkSlider.value = String(state.simulation.walk_time_min ?? 5);
   dom.weatherButtons.forEach((b) => {
     const on = Number(b.dataset.weather) === state.simulation.weather_severity;
     b.classList.toggle("is-active", on); b.setAttribute("aria-pressed", String(on));
   });
-  [dom.timeSlider, dom.lagSlider, dom.dwellSlider, dom.speedSlider].forEach(updateRangeFill);
+  [dom.timeSlider, dom.lagSlider, dom.dwellSlider, dom.speedSlider, dom.walkSlider].filter(Boolean).forEach(updateRangeFill);
   setPresetSelection(state.activePreset);
   updateControlLabels();
 }
@@ -380,6 +383,15 @@ function renderRiderCard() {
   dom.etaSegmentName.textContent = routeName(segment.name);
   dom.etaClassifier.textContent = `${statusText(segment.delay_status)} · ${Number(segment.status_probability_pct).toFixed(0)}%`;
   dom.etaWindow.textContent = `${signed(segment.lower_bound_min)} to ${signed(segment.upper_bound_min)} min`;
+  if (dom.etaLeave) {
+    const leave = Number(segment.leave_by_min);
+    const walk = Number(state.simulation.walk_time_min ?? segment.walk_time_min ?? 5);
+    const start = Number(segment.window_start_min);
+    dom.etaLeave.textContent = Number.isFinite(leave) ? (leave > 0.05 ? `In ${leave.toFixed(1)} min` : "Now") : "--";
+    dom.etaLeave.title = Number.isFinite(start)
+      ? `Window starts in ${start.toFixed(1)} min, minus a ${walk.toFixed(0)} min walk`
+      : "Window start minus walk time";
+  }
 }
 
 function renderXai() {
@@ -715,7 +727,8 @@ function togglePlayback() {
 
 function applyPreset(name) {
   if (!PRESETS[name]) return;
-  state.simulation = { ...PRESETS[name] };
+  const walk = state.simulation.walk_time_min ?? 5;
+  state.simulation = { ...PRESETS[name], walk_time_min: walk };
   setPresetSelection(name);
   syncControlsFromState();
   scheduleSimulation(40);
@@ -759,8 +772,8 @@ function bindEvents() {
     switchView(next.dataset.view); next.focus();
   });
 
-  const sliders = [[dom.timeSlider, "hour_of_day"], [dom.lagSlider, "rolling_3trip_delay_min"], [dom.dwellSlider, "prev_stop_dwell_sec"], [dom.speedSlider, "gps_speed_kmh"]];
-  sliders.forEach(([el, key]) => el.addEventListener("input", () => {
+  const sliders = [[dom.timeSlider, "hour_of_day"], [dom.lagSlider, "rolling_3trip_delay_min"], [dom.dwellSlider, "prev_stop_dwell_sec"], [dom.speedSlider, "gps_speed_kmh"], [dom.walkSlider, "walk_time_min"]];
+  sliders.forEach(([el, key]) => el && el.addEventListener("input", () => {
     state.simulation[key] = Number(el.value);
     clearPresetSelection(); updateRangeFill(el); updateControlLabels(); scheduleSimulation();
   }));

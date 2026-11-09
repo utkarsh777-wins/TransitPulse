@@ -40,7 +40,7 @@ The Render process uses the same app object:
 uvicorn src.app:app --host 0.0.0.0 --port 8000
 ```
 
-Open `http://127.0.0.1:8000`. Evaluator view: `http://127.0.0.1:8000/?view=evaluator`.
+Open `http://127.0.0.1:8000` for the landing page. The live dashboard is `http://127.0.0.1:8000/demo`. Evaluator view: `http://127.0.0.1:8000/demo?view=evaluator`.
 
 `run.ps1` is the Windows launcher. It installs `requirements.txt` if imports fail, runs `src/export_artifacts.py` only when `models/dq_audit_report.json` is missing, and starts uvicorn. With the committed artifacts present it does not retrain.
 
@@ -69,7 +69,7 @@ Connect the GitHub repository yourself after this pull request is merged to `mai
    - Health check path: `/api/health`
 6. Click **Apply**. Do not add a database, Redis, or a paid instance. Leave `PORT` unset so Render can assign it.
 7. Wait until the deploy is **Live**.
-8. Open the service URL. `/` is the dashboard. `/api/health` returns `"status": "ok"` and `"models_loaded": true`.
+8. Open the service URL. `/` is the landing page, `/demo` is the live dashboard, and `/api/health` returns `"status": "ok"` and `"models_loaded": true`.
 
 If the name `transitpulse` is already taken on the account, rename it in the preview. The `onrender.com` hostname has to be unique. To try the branch before merge, select `feat/deploy-ready` in step 4 instead of `main`.
 
@@ -119,7 +119,12 @@ The same settings, if you create a web service by hand instead of a Blueprint:
 | `GET` | `/api/corridor` | Six stops, five segments, distances, scheduled times, peak windows |
 | `POST` | `/api/simulate` | Runs live inference across all five segments |
 | `GET` | `/api/diagnostics` | Model metadata, data-quality audit, verification, plots, runtime |
-| `GET` | `/` | Static dashboard from `web/`. The page calls `/api/*` with root-relative URLs, so the same build works on any host. If the API cannot be reached, the page keeps an in-browser stand-in and labels it **Stand-in fallback** (a heuristic, not the trained model). |
+| `GET` | `/` | Landing page |
+| `GET` | `/how-it-works` | Pipeline and interval explanation |
+| `GET` | `/demo` | Live dashboard. Root-relative `/api/*` calls. If the API cannot be reached, the page keeps an in-browser stand-in and labels it **Stand-in fallback** (a heuristic, not the trained model). `?view=evaluator` opens the audit tab. |
+| `GET` | `/model` | Held-out metrics, coverage, and the GPS-speed ablation |
+| `GET` | `/about` | SIH25013, roadmap, and the builder |
+| `GET` | `/api/evidence` | Synthetic-data note, interval coverage, ablation MAE/R², artifact hashes |
 | `GET` | `/assets/*` | Diagnostic assets from `assets/` |
 
 Example simulation request:
@@ -205,11 +210,16 @@ TransitPulse/
 ├── notebooks/                   Phase 1 pipeline and Phase 2 training notebooks
 ├── src/
 │   ├── app.py                   FastAPI backend, interval math, inference, status rules
+│   ├── ablation.py              GPS-speed ablation and interval coverage
 │   └── export_artifacts.py      Artifact verification, audit generation, Phase 2 plot
 ├── tests/
 │   └── test_smoke.py            Import and API smoke tests
 ├── web/
-│   ├── index.html               Dashboard layout
+│   ├── index.html               Landing page
+│   ├── how-it-works.html        Pipeline explanation
+│   ├── demo.html                Live dashboard (same behaviour, site chrome)
+│   ├── model.html               Metrics, coverage, ablation
+│   ├── about.html               SIH25013, roadmap, builder
 │   ├── styles.css               Theme tokens and responsive layout
 │   ├── app.js                   Map, inference UI, stand-in fallback
 │   └── standin.js               In-browser heuristic used only when the API is unreachable

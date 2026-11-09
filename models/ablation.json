@@ -1,0 +1,43 @@
+{
+  "dropped_feature": "gps_speed_kmh",
+  "seed": 42,
+  "split": {
+    "train_days": "1-24",
+    "test_days": "25-30"
+  },
+  "estimator": "RandomForestRegressor",
+  "hyperparameters": {
+    "n_estimators": 100,
+    "max_depth": 12,
+    "random_state": 42
+  },
+  "features": [
+    "hour_of_day",
+    "day_of_week",
+    "is_weekend",
+    "is_peak_hour",
+    "segment_id",
+    "segment_distance_km",
+    "scheduled_time_min",
+    "historical_segment_avg_min",
+    "rolling_3trip_delay_min",
+    "prev_stop_dwell_sec",
+    "weather_severity"
+  ],
+  "n_train": 3750,
+  "n_test": 945,
+  "metrics": {
+    "reg_mae": 0.819,
+    "reg_r2": 0.903
+  },
+  "full_model_metrics_ref": {
+    "reg_mae": 0.627,
+    "reg_r2": 0.945
+  },
+  "data": {
+    "source": "notebooks/01_phase1_data_pipeline.ipynb",
+    "seed": 42,
+    "synthetic": true
+  },
+  "note": "Same split and seed as the shipped regressor, with gps_speed_kmh removed. gps_speed_kmh can leak the target because a slower ping is partly the delay itself. Scores are on synthetic held-out days, not real-world accuracy."
+}

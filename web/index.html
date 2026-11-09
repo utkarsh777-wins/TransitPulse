@@ -1,18 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="no-js">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#F3F1EC" id="meta-theme-color">
-  <title>TransitPulse AI · NH-44 delay intelligence</title>
+  <title>TransitPulse · Honest bus arrival windows for Punjab</title>
+  <meta name="description" content="Arrival windows, not wishful minutes. ML delay prediction for Punjab's tier-2 and intercity buses.">
   <script>
-    /* Set the theme before first paint: ?theme= (screenshots) > saved choice > OS preference. */
     (function () {
-      var q = new URLSearchParams(location.search).get("theme");
-      var saved = null;
-      try { saved = localStorage.getItem("tp-theme"); } catch (e) {}
-      var t = q === "light" || q === "dark" ? q : saved === "light" || saved === "dark" ? saved
+      var q = new URLSearchParams(location.search).get("theme"), s = null;
+      try { s = localStorage.getItem("tp-theme"); } catch (e) {}
+      var t = q === "light" || q === "dark" ? q : s === "light" || s === "dark" ? s
         : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
       document.documentElement.dataset.theme = t;
     })();
@@ -22,381 +21,303 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&family=Geist+Mono:wght@400..600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/chrome.css">
+  <link rel="stylesheet" href="css/site.css">
 </head>
-<body data-view="live">
+<body>
   <a class="skip-link" href="#main">Skip to content</a>
-
-  <header class="topbar">
-    <div class="topbar-inner">
-      <a class="brand" href="./" aria-label="TransitPulse AI home">
-        <img class="brand-lockup on-light" src="assets/logo/lockup-light.svg" alt="TransitPulse" width="182" height="56">
-        <img class="brand-lockup on-dark" src="assets/logo/lockup-dark.svg" alt="" aria-hidden="true" width="182" height="56">
-        <span class="brand-desc">
-          <span class="brand-product">AI · NH-44 delay intelligence</span>
-          <span class="brand-route">Jalandhar → Phagwara</span>
-        </span>
+  <header class="site-header">
+    <div class="wrap site-header-inner">
+      <a class="site-brand" href="/" aria-label="TransitPulse home">
+        <img class="on-light" src="assets/logo/lockup-light.svg" alt="TransitPulse" width="170" height="52">
+        <img class="on-dark" src="assets/logo/lockup-dark.svg" alt="TransitPulse" width="170" height="52">
       </a>
-
-      <nav class="view-tabs" aria-label="Dashboard views" role="tablist">
-        <button class="view-tab is-active" data-view="live" role="tab" aria-selected="true" aria-controls="view-live" id="tab-live" type="button">
-          <span class="tab-long">Live Rider &amp; Fleet Simulator</span><span class="tab-short">Live simulator</span>
-        </button>
-        <button class="view-tab" data-view="evaluator" role="tab" aria-selected="false" aria-controls="view-evaluator" id="tab-evaluator" type="button">
-          <span class="tab-long">Evaluator Diagnostics</span><span class="tab-short">Diagnostics</span>
-        </button>
+      <nav class="site-nav" id="site-nav" aria-label="Main">
+        <a href="/how-it-works">How it works</a>
+        <a href="/demo">Live demo</a>
+        <a href="/model">Model &amp; evaluation</a>
+        <a href="/about">About &amp; roadmap</a>
+        <a class="btn btn-primary site-nav-cta" href="/demo">Open live demo</a>
       </nav>
-
-      <div class="topbar-meta">
-        <div class="sync-pill" id="sync-pill" data-state="busy" role="status">
-          <span class="sync-dot" aria-hidden="true"></span>
-          <span id="sync-label">Connecting</span>
-        </div>
-        <div class="clock" aria-label="Local time, IST">
-          <span class="clock-label">IST</span>
-          <time id="live-clock">--:--:--</time>
-        </div>
-        <button class="icon-btn theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark theme" title="Switch theme">
+      <div class="site-actions">
+        <a class="btn btn-ghost gh" href="https://github.com/utkarsh777-wins/TransitPulse" rel="noreferrer">GitHub</a>
+        <button class="site-icon-btn theme-toggle" id="theme-toggle" type="button" aria-label="Switch theme" title="Switch theme">
           <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
           <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
+        </button>
+        <a class="btn btn-primary" href="/demo">Live demo <span class="arrow" aria-hidden="true">→</span></a>
+        <button class="site-icon-btn site-menu-btn" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu">
+          <svg class="i-menu" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          <svg class="i-close" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
       </div>
     </div>
   </header>
-
-  <p class="standin-banner" id="standin-banner" hidden>
-    <strong>Stand-in fallback.</strong> The API is unreachable, so these numbers are an in-browser heuristic, not the trained model.
-  </p>
-
-  <main class="main" id="main">
-    <!-- ============================================================ LIVE -->
-    <section class="view view-live" id="view-live" role="tabpanel" aria-labelledby="tab-live">
-      <div class="kpis area-kpis" aria-label="Corridor summary">
-        <article class="kpi">
-          <h3 class="label">Corridor delay</h3>
-          <p class="kpi-value"><span class="num" id="stat-delay">--</span><span class="unit">min</span></p>
-          <p class="kpi-foot" id="stat-delay-foot">Awaiting inference</p>
-        </article>
-        <article class="kpi">
-          <h3 class="label">Fleet confidence</h3>
-          <p class="kpi-value"><span class="num" id="stat-confidence">--</span><span class="unit">%</span></p>
-          <p class="kpi-foot" id="stat-confidence-foot">80% quantile envelope</p>
-        </article>
-        <article class="kpi kpi-eta">
-          <h3 class="label">Next stop ETA</h3>
-          <p class="kpi-value"><span class="flap flap-sm" id="stat-eta" aria-live="off">--</span><span class="unit">min</span></p>
-          <p class="kpi-foot" id="stat-eta-foot">Next stop</p>
-        </article>
-        <article class="kpi">
-          <h3 class="label">Live status</h3>
-          <p class="kpi-value kpi-status"><span class="status-dot" id="stat-status-dot" aria-hidden="true"></span><span id="stat-status">--</span></p>
-          <p class="kpi-foot" id="stat-status-foot">Classifier output</p>
-        </article>
-      </div>
-
-      <section class="card map-card area-map" aria-labelledby="map-title">
-        <header class="card-head">
-          <div class="card-title">
-            <span class="label">Live fleet telemetry</span>
-            <h2 id="map-title">NH-44 corridor</h2>
+  <main id="main">
+    <!-- HERO -->
+    <section class="hero">
+      <div class="wrap">
+        <div class="hero-top">
+          <div>
+            <span class="eyebrow is-brand" data-reveal>SIH25013 · NH-44 Jalandhar → Phagwara</span>
+            <h1 class="h-hero" data-reveal style="--rd:60ms">Arrival windows, <span class="muted">not wishful minutes.</span></h1>
           </div>
-          <div class="card-tools">
-            <ul class="legend" aria-label="Segment status legend">
-              <li><i class="swatch ontime"></i>On time</li>
-              <li><i class="swatch moderate"></i>Moderate</li>
-              <li><i class="swatch severe"></i>Severe</li>
-            </ul>
-            <button class="icon-btn" id="recenter-map" type="button" title="Recenter corridor" aria-label="Recenter corridor">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4"/><circle cx="12" cy="12" r="2.5"/></svg>
-            </button>
+          <div class="hero-side" data-reveal style="--rd:140ms">
+            <p class="lead">TransitPulse predicts when a bus will really reach your stop: as a time range, with how sure it is, and when you should leave. It is built for Punjab's tier-2 and intercity routes.</p>
+            <div class="row">
+              <a class="btn btn-primary" href="/demo">Open the live demo <span class="arrow" aria-hidden="true">→</span></a>
+              <a class="btn btn-secondary" href="/how-it-works">How the window is made</a>
+            </div>
           </div>
-        </header>
-        <div class="map-wrap" id="map-wrap">
-          <div id="map" aria-label="Map of the NH-44 corridor from Jalandhar to Phagwara with live bus position"></div>
-          <div class="map-fallback" id="map-fallback" hidden></div>
         </div>
-        <dl class="telemetry" id="telemetry">
-          <div class="tel-bus">
-            <dt class="sr-only">Vehicle</dt>
-            <dd>
-              <span class="bus-chip" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 16V7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v9M5 16h14M8 19h1.5M14.5 19H16M8.5 9h7M8.5 12.5h7"/></svg></span>
-              <span><strong class="mono">PB08-BUS-101</strong><span class="tel-route" id="hud-route">Jalandhar BS → Phagwara BS</span></span>
-            </dd>
+
+        <!-- Product frame: the rider card -->
+        <figure class="frame" data-reveal style="--rd:220ms" aria-label="Example rider card for Haveli Corridor stop">
+          <div class="frame-bar" aria-hidden="true">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="url">transitpulse · rider view · NH-44</span>
           </div>
-          <div><dt>State</dt><dd><span class="state-chip" id="hud-state">Tracking</span></dd></div>
-          <div><dt>Heading to</dt><dd id="hud-next-stop">PAP Chowk</dd></div>
-          <div><dt>Speed</dt><dd class="mono"><span id="hud-speed">--</span> km/h</dd></div>
-          <div class="tel-coords"><dt>Position</dt><dd class="mono"><span id="hud-lat">31.31560</span>, <span id="hud-lon">75.59200</span></dd></div>
-          <div class="tel-progress">
-            <dt>Progress <span class="mono" id="hud-progress-value">0%</span></dt>
-            <dd><span class="track" aria-hidden="true"><i id="hud-progress-bar"></i></span></dd>
-          </div>
-        </dl>
-      </section>
-
-      <div class="rail area-rail">
-        <section class="card eta-card" id="eta-card" aria-labelledby="eta-title">
-          <div class="notice" id="peak-alert" hidden>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 3 20h18L12 4Z"/><path d="M12 10v4M12 17h.01"/></svg>
-            <p><strong>Peak traffic volatility.</strong> <span>Prediction confidence is lower, so the ETA is shown as an 80% window.</span></p>
-          </div>
-          <header class="card-head">
-            <div class="card-title">
-              <span class="label">Rider ETA · next stop</span>
-              <h2 id="eta-title">PAP Chowk</h2>
-            </div>
-            <span class="badge" id="confidence-badge">Confidence --</span>
-          </header>
-
-          <div class="eta-hero">
-            <span class="eta-kicker" id="eta-kicker">Arrives in</span>
-            <div class="eta-figure">
-              <span class="flap flap-lg" id="eta-value">--</span><span class="unit">min</span>
-            </div>
-            <div class="eta-delta">
-              <span class="status-chip" id="eta-status">--</span>
-              <span class="eta-delta-text" id="eta-meta">Scheduled -- min</span>
-            </div>
-          </div>
-
-          <div class="eta-window" id="eta-range" hidden>
-            <div class="eta-window-top">
-              <span class="label">80% arrival window</span>
-              <strong class="mono" id="eta-range-value">--</strong>
-            </div>
-            <div class="window-track" aria-hidden="true">
-              <i class="window-band" id="range-bar"></i>
-              <i class="window-sched" id="range-sched"></i>
-            </div>
-            <div class="window-scale"><span>0 min</span><span id="range-max">--</span></div>
-          </div>
-
-          <div class="advice">
-            <span class="label">Rider recommendation</span>
-            <p id="recommendation">Select a segment to inspect live rider guidance.</p>
-          </div>
-
-          <dl class="facts">
-            <div><dt>Segment</dt><dd id="eta-segment-name">--</dd></div>
-            <div><dt>Classifier</dt><dd id="eta-classifier">--</dd></div>
-            <div><dt>Delay window</dt><dd class="mono" id="eta-window">--</dd></div>
-          </dl>
-        </section>
-
-        <section class="card xai-card" aria-labelledby="xai-title">
-          <header class="card-head">
-            <div class="card-title">
-              <span class="label">Explainable AI</span>
-              <h2 id="xai-title">Why this delay?</h2>
-            </div>
-            <span class="tag mono" id="xai-segment">SEG 01</span>
-          </header>
-          <div class="xai-row xai-axis" aria-hidden="true"><span></span><span class="xai-axis-labels"><span>− Saves</span><span>Adds +</span></span><span></span></div>
-          <div class="xai-bars" id="xai-bars" role="list" aria-label="Local feature attribution in minutes"></div>
-          <div class="xai-sum" id="xai-sum"></div>
-          <p class="footnote">Neutral baseline <strong class="mono" id="xai-baseline">--</strong>. Local leave-one-out attribution, in minutes: each bar is the change in predicted delay when that factor is added back.</p>
-        </section>
-      </div>
-
-      <section class="card segments-card area-segments" aria-labelledby="seg-title">
-        <header class="card-head">
-          <div class="card-title">
-            <span class="label">Classifier segment grid</span>
-            <h2 id="seg-title">Live delay classification</h2>
-          </div>
-          <ul class="seg-summary" aria-label="Segments by status">
-            <li><i class="swatch ontime"></i><b class="mono" id="count-on-time">0</b> On time</li>
-            <li><i class="swatch moderate"></i><b class="mono" id="count-moderate">0</b> Moderate</li>
-            <li><i class="swatch severe"></i><b class="mono" id="count-severe">0</b> Severe</li>
-          </ul>
-        </header>
-        <div class="seg-table" role="table" aria-label="Segments">
-          <div class="seg-row seg-head" role="row">
-            <span role="columnheader">Seg</span>
-            <span role="columnheader">Route</span>
-            <span role="columnheader" class="r">Sched</span>
-            <span role="columnheader" class="r">ETA</span>
-            <span role="columnheader" class="r">Delay</span>
-            <span role="columnheader">80% window</span>
-            <span role="columnheader">Status</span>
-            <span role="columnheader">Confidence</span>
-          </div>
-          <div id="segment-list" role="rowgroup"></div>
-        </div>
-      </section>
-
-      <section class="card controls-card area-controls" id="controls" aria-labelledby="controls-title">
-        <header class="card-head controls-head">
-          <button class="sheet-handle" id="sheet-toggle" type="button" aria-expanded="false" aria-controls="controls-body">
-            <span class="grabber" aria-hidden="true"></span>
-            <span class="card-title">
-              <span class="label">Scenario engine</span>
-              <span class="h2" id="controls-title">Simulation controls</span>
-            </span>
-            <span class="sheet-summary mono" id="sheet-summary">13:00 · Clear</span>
-            <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>
-          </button>
-          <button class="btn btn-quiet play-btn" id="play-toggle" type="button" aria-pressed="true">
-            <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12M15 6v12"/></svg>
-            <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6v12l10-6-10-6Z"/></svg>
-            <span id="play-label">Pause bus</span>
-          </button>
-        </header>
-
-        <div class="controls-body" id="controls-body">
-          <div class="field">
-            <span class="field-label" id="preset-label">Preset scenario</span>
-            <div class="segmented presets" role="group" aria-labelledby="preset-label">
-              <button class="seg-btn preset-btn" data-preset="midday" type="button">Midday Clear</button>
-              <button class="seg-btn preset-btn" data-preset="rush" type="button">Morning Rush + Rain</button>
-              <button class="seg-btn preset-btn" data-preset="evening" type="button">Evening Gridlock</button>
-            </div>
-          </div>
-
-          <div class="control-grid">
-            <div class="field">
-              <label class="field-label" for="time-slider">Time of day <output class="mono"><span id="time-value">13:00</span> <em class="peak-flag" id="peak-flag">Off-peak</em></output></label>
-              <div class="range peak-range">
-                <span class="peak-band" style="--from:2;--to:4" aria-hidden="true"></span>
-                <span class="peak-band" style="--from:11;--to:13" aria-hidden="true"></span>
-                <input type="range" id="time-slider" min="6" max="21" step="1" value="13">
+          <div class="frame-body">
+            <div class="frame-main">
+              <div class="rider-head">
+                <div>
+                  <p class="rider-label">Your stop · next bus</p>
+                  <p class="rider-stop">Haveli Corridor</p>
+                </div>
+                <span class="chip moderate"><span class="dot" aria-hidden="true"></span>Peak traffic: wider window</span>
               </div>
-              <div class="scale"><span>06:00</span><span>Peak 08–10 · 17–19</span><span>21:00</span></div>
-            </div>
-
-            <div class="field">
-              <span class="field-label" id="weather-label">Weather <output id="weather-value">Clear</output></span>
-              <div class="segmented weather" role="group" aria-labelledby="weather-label">
-                <button class="seg-btn weather-btn is-active" data-weather="0" type="button">Clear</button>
-                <button class="seg-btn weather-btn" data-weather="1" type="button">Light rain</button>
-                <button class="seg-btn weather-btn" data-weather="2" type="button">Heavy</button>
+              <div class="window-readout">
+                <p class="rider-label">Arrives between</p>
+                <p class="flap" data-flap="17:38–17:51" data-flap-intro data-label="Arrives between 17:38 and 17:51" style="margin-top:10px">17:38–17:51</p>
+              </div>
+              <div class="window-facts">
+                <span class="chip"><b class="mono">85%</b>&nbsp;confidence</span>
+                <span class="chip ink">Leave by <b class="mono">&nbsp;17:31</b></span>
+                <span class="chip">Scheduled <b class="mono">&nbsp;17:42</b></span>
+              </div>
+              <div class="axis" aria-hidden="true">
+                <div class="axis-track">
+                  <div class="axis-ticks"><span><b>17:25</b></span><span><b>17:30</b></span><span><b>17:35</b></span><span><b>17:40</b></span><span><b>17:45</b></span><span><b>17:50</b></span><span><b>17:55</b></span></div>
+                  <div class="axis-band" style="left:43.33%;width:43.33%"><span class="mid" style="left:calc(61.5% - 1.5px)"></span></div>
+                  <span class="axis-mark leave" style="left:20%"><b>Leave 17:31</b><i></i></span>
+                  <span class="axis-mark sched" style="left:56.67%"><span class="t">Sched. 17:42</span><i></i></span>
+                </div>
+                <div class="axis-legend">
+                  <span><i style="background:color-mix(in srgb,var(--accent) 22%,var(--surface));border:1.5px solid var(--accent)"></i>Likely window (10th–90th pct.)</span>
+                  <span><i style="background:var(--accent);width:4px"></i>Most likely</span>
+                </div>
               </div>
             </div>
-
-            <div class="field">
-              <label class="field-label" for="lag-slider">Upstream traffic lag <output class="mono"><span id="lag-value">0.5</span> min</output></label>
-              <div class="range"><input type="range" id="lag-slider" min="0" max="15" step="0.1" value="0.5"></div>
-              <div class="scale"><span>0</span><span>15 min</span></div>
-            </div>
-
-            <div class="field">
-              <label class="field-label" for="dwell-slider">Boarding dwell time <output class="mono"><span id="dwell-value">30</span> s</output></label>
-              <div class="range"><input type="range" id="dwell-slider" min="15" max="120" step="5" value="30"></div>
-              <div class="scale"><span>15 s</span><span>120 s</span></div>
-            </div>
-
-            <div class="field">
-              <label class="field-label" for="speed-slider">Corridor GPS speed <output class="mono"><span id="speed-value">30</span> km/h</output></label>
-              <div class="range"><input type="range" id="speed-slider" min="10" max="60" step="1" value="30"></div>
-              <div class="scale"><span>10</span><span>60 km/h</span></div>
+            <div class="frame-side">
+              <p class="rider-label">Bus PB08-BUS-101 · 3 stops away</p>
+              <div class="mini-corridor" aria-hidden="true">
+                <svg viewBox="0 -14 330 124">
+                  <path id="corr" class="route" d="M10 14 L56 19 L86 25 L154 47 L199 60 L310 86"/>
+                  <path class="done" d="M10 14 L56 19 L70 22"/>
+                  <circle class="stop" cx="10" cy="14" r="5"/><circle class="stop" cx="56" cy="19" r="5"/><circle class="stop" cx="86" cy="25" r="5"/>
+                  <circle class="stop is-you" cx="154" cy="47" r="6"/><circle class="stop" cx="199" cy="60" r="5"/><circle class="stop" cx="310" cy="86" r="5"/>
+                  <text x="4" y="0" text-anchor="start">Jalandhar BS</text>
+                  <text x="160" y="36">Your stop</text>
+                  <text x="310" y="104" text-anchor="end">Phagwara BS</text>
+                  <g class="bus" data-bus-path="corr" transform="translate(70,22)"><rect x="-7" y="-7" width="14" height="14" rx="3"/></g>
+                </svg>
+              </div>
+              <div class="side-row"><span class="k">Delay vs schedule</span><span class="v">+4 min</span><span class="sub">Behind a late bus (3-trip lag), evening peak</span></div>
+              <div class="side-row"><span class="k">Window width</span><span class="v">13 min</span><span class="sub">Peak hours widen the range by design</span></div>
+              <div class="side-row"><span class="k">Guidance</span><span class="v">in 7 min</span><span class="sub">Leave by 17:31: window opens 17:38, your walk is 7 min</span></div>
             </div>
           </div>
+        </figure>
+        <p class="hero-meta">Illustrative rider card. Times and confidence are examples; live values come from the model in the demo.</p>
+
+        <!-- Facts strip -->
+        <div class="facts" data-reveal>
+          <div class="fact"><b>21.2 km</b><span>NH-44 corridor</span></div>
+          <div class="fact"><b>6 · 5</b><span>stops · segments</span></div>
+          <div class="fact"><b>4,800</b><span>GPS pings (generated)</span></div>
+          <div class="fact"><b>97.81%</b><span>kept by 4 quality gates</span></div>
+          <div class="fact"><b>12</b><span>model features</span></div>
+          <div class="fact"><b>0.627 min</b><span>held-out MAE</span></div>
         </div>
-      </section>
+      </div>
     </section>
 
-    <!-- ============================================================ EVALUATOR -->
-    <section class="view view-eval" id="view-evaluator" role="tabpanel" aria-labelledby="tab-evaluator" hidden>
-      <div class="eval-hero">
-        <div class="eval-intro">
-          <span class="label">Rubric audit view</span>
-          <h2>Evaluator diagnostics &amp; validation proof</h2>
-          <p>Frozen ML artifacts, data-quality gates, time-respecting validation and uncertainty calibration for the NH-44 transit corridor.</p>
+    <!-- PROBLEM → WINDOW -->
+    <section class="section" id="problem">
+      <div class="wrap">
+        <p class="statement" data-reveal>A timetable promises one minute. The road rarely keeps it. <span class="muted">TransitPulse learns how each stretch of NH-44 really behaves, then tells riders the range their bus will most likely arrive in, how sure it is, and when to leave.</span></p>
+        <div class="figs">
+          <article class="fig" data-reveal>
+            <span class="fig-no">Fig 0.1</span>
+            <div class="fig-art" aria-hidden="true">
+              <svg viewBox="0 0 300 180">
+                <line class="dg-soft" x1="10" y1="140" x2="290" y2="140"/>
+                <g class="dg-soft"><line x1="10" y1="136" x2="10" y2="144"/><line x1="80" y1="136" x2="80" y2="144"/><line x1="150" y1="136" x2="150" y2="144"/><line x1="220" y1="136" x2="220" y2="144"/><line x1="290" y1="136" x2="290" y2="144"/></g>
+                <line class="dg-dash" x1="150" y1="40" x2="150" y2="140"/>
+                <circle class="dg-dot" cx="150" cy="140" r="6"/>
+                <text class="dg-text" x="150" y="30" text-anchor="middle">17:42</text>
+                <text class="dg-text" x="10" y="164">17:30</text><text class="dg-text" x="290" y="164" text-anchor="end">17:55</text>
+              </svg>
+            </div>
+            <h3>The timetable</h3>
+            <p>One scheduled minute, with no sense of how often it holds.</p>
+          </article>
+          <article class="fig" data-reveal style="--rd:80ms">
+            <span class="fig-no">Fig 0.2</span>
+            <div class="fig-art" aria-hidden="true">
+              <svg viewBox="0 0 300 180">
+                <line class="dg-soft" x1="10" y1="140" x2="290" y2="140"/>
+                <line class="dg-dash" x1="150" y1="40" x2="150" y2="140"/>
+                <g class="dg-dot">
+                  <circle cx="118" cy="128" r="4"/><circle cx="131" cy="116" r="4"/><circle cx="142" cy="104" r="4"/><circle cx="149" cy="122" r="4"/><circle cx="156" cy="92" r="4"/><circle cx="162" cy="110" r="4"/><circle cx="168" cy="128" r="4"/><circle cx="174" cy="80" r="4"/><circle cx="181" cy="100" r="4"/><circle cx="188" cy="118" r="4"/><circle cx="196" cy="88" r="4"/><circle cx="204" cy="108" r="4"/><circle cx="214" cy="126" r="4"/><circle cx="226" cy="96" r="4"/><circle cx="240" cy="116" r="4"/><circle cx="262" cy="128" r="4"/><circle cx="96" cy="124" r="4"/><circle cx="137" cy="86" r="4"/>
+                </g>
+                <text class="dg-text" x="150" y="30" text-anchor="middle">17:42</text>
+                <text class="dg-text" x="10" y="164">17:30</text><text class="dg-text" x="290" y="164" text-anchor="end">17:55</text>
+              </svg>
+            </div>
+            <h3>The road</h3>
+            <p>Real arrivals scatter around it. The spread grows at peak hours, after rain, and behind a late bus.</p>
+          </article>
+          <article class="fig" data-reveal style="--rd:160ms">
+            <span class="fig-no">Fig 0.3</span>
+            <div class="fig-art" aria-hidden="true">
+              <svg viewBox="0 0 300 180">
+                <rect class="dg-accent" x="126" y="70" width="114" height="70" rx="6"/>
+                <line class="dg-soft" x1="10" y1="140" x2="290" y2="140"/>
+                <g class="dg-dot-soft"><circle cx="96" cy="124" r="4"/><circle cx="262" cy="128" r="4"/><circle cx="118" cy="128" r="4"/></g>
+                <g class="dg-dot"><circle cx="131" cy="116" r="4"/><circle cx="142" cy="104" r="4"/><circle cx="149" cy="122" r="4"/><circle cx="156" cy="92" r="4"/><circle cx="162" cy="110" r="4"/><circle cx="168" cy="128" r="4"/><circle cx="174" cy="80" r="4"/><circle cx="181" cy="100" r="4"/><circle cx="188" cy="118" r="4"/><circle cx="196" cy="88" r="4"/><circle cx="204" cy="108" r="4"/><circle cx="214" cy="126" r="4"/><circle cx="226" cy="96" r="4"/><circle cx="137" cy="86" r="4"/></g>
+                <line class="dg-line" x1="60" y1="52" x2="60" y2="140"/><circle class="dg-dot" cx="60" cy="52" r="3"/>
+                <text class="dg-text" x="60" y="40" text-anchor="middle">leave</text>
+                <text class="dg-text" x="183" y="58" text-anchor="middle">17:38–17:51</text>
+                <text class="dg-text" x="10" y="164">17:30</text><text class="dg-text" x="290" y="164" text-anchor="end">17:55</text>
+              </svg>
+            </div>
+            <h3>The window</h3>
+            <p>TransitPulse covers the likely spread with a 10th–90th percentile band and works back to a leave-by time.</p>
+          </article>
         </div>
-        <div class="verdict" id="verification-summary">
-          <span class="verdict-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span>
+      </div>
+    </section>
+
+    <!-- PIPELINE TEASER -->
+    <section class="section">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">How it works</span>
+          <h2 class="h-1" data-reveal>From a GPS ping to a window you can trust.</h2>
+          <div data-reveal style="--rd:80ms">
+            <p class="lead">Five steps, each one inspectable. Bad pings are dropped before they reach the model, and the window is a separate model, not a fudge factor on the point estimate.</p>
+            <a class="link" href="/how-it-works">See the full pipeline <span class="arrow" aria-hidden="true">→</span></a>
+          </div>
+        </div>
+        <ol class="rail">
+          <li class="rail-step" style="--rd:0ms"><div class="node"><b>01</b></div><h3>GPS telemetry</h3><p>Position, speed and stop dwell for every trip on the corridor.</p><p class="mono-sub">4,800 pings · 30 days</p></li>
+          <li class="rail-step" style="--rd:120ms"><div class="node"><b>02</b></div><h3>Quality gates</h3><p>Geofence, speed sanity, dwell imputation and duplicate removal.</p><p class="mono-sub">4 gates · 97.81% kept</p></li>
+          <li class="rail-step" style="--rd:240ms"><div class="node"><b>03</b></div><h3>Delay model</h3><p>Random-forest regressor and classifier over 12 features.</p><p class="mono-sub">RF · days 1–24 train</p></li>
+          <li class="rail-step" style="--rd:360ms"><div class="node"><b>04</b></div><h3>Window</h3><p>10th and 90th percentile models set the range. Peak hours widen it.</p><p class="mono-sub">q10 / q90 · ×1.35 at peak</p></li>
+          <li class="rail-step is-out" style="--rd:480ms"><div class="node"><b>05</b></div><h3>Rider guidance</h3><p>Arrival window, confidence, status and a leave-by time.</p><p class="mono-sub">window · status · leave by</p></li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- EVIDENCE -->
+    <section class="section band">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">Model evidence</span>
+          <h2 class="h-1" data-reveal>Measured on unseen days, with the caveats attached.</h2>
+          <p class="lead" data-reveal style="--rd:80ms">Trained on days 1–24 and tested on days 25–30, which the model never saw. The comparison is against the simplest honest baseline: each segment's historical average.</p>
+        </div>
+        <div class="metrics" data-reveal>
+          <div class="metric"><p class="val">0.627<small>min</small></p><h3>Mean absolute error</h3><p>Held-out days 25–30. RMSE 0.914 min, R² 0.945.</p></div>
+          <div class="metric"><p class="val">82.07<small>%</small></p><h3>Less error than the baseline</h3><p>The historical-average baseline misses by 3.498 min on the same days.</p></div>
+          <div class="metric"><p class="val">1.1→3.5<small>min</small></p><h3>Window width, off-peak → peak</h3><p>1.095 vs 3.491 min. The window widens when the road is less predictable.</p></div>
+        </div>
+        <div class="callout" style="margin-top:20px" data-reveal>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v4M12 17h.01"/></svg>
+          <p><strong>These scores are not real-world accuracy.</strong> The training table is synthetic GPS from notebook 01, seed 42, for this one corridor. The published interval covers <b class="mono" data-evidence="coverage-overall">…</b> of held-out delays (peak <span data-evidence="coverage-peak">…</span>, off-peak <span data-evidence="coverage-offpeak">…</span>). Retraining without <code class="mono">gps_speed_kmh</code> gives MAE <b class="mono" data-evidence="ablation-mae">…</b> min and R² <span class="mono" data-evidence="ablation-r2">…</span>. <a class="link" style="min-height:0;display:inline" href="/model#caveats">All caveats →</a></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- AUDIENCE -->
+    <section class="section">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">Built for Punjab</span>
+          <h2 class="h-1" data-reveal>For the rider at the stop and the depot behind the route.</h2>
+          <p class="lead" data-reveal style="--rd:80ms">Tier-2 towns and intercity highways have long headways, mixed traffic and patchy data. A late bus can cost a rider half an hour. The answer is an honest range, not a falsely precise number.</p>
+        </div>
+        <div class="aud">
+          <article class="card" data-reveal>
+            <span class="card-label">Riders</span>
+            <h3 class="h-3">Plan around a range.</h3>
+            <ul>
+              <li>An arrival window and a leave-by time for your stop</li>
+              <li>A plain notice when peak traffic or rain makes the window wider</li>
+              <li>Never told "board now" when the model is unsure</li>
+            </ul>
+          </article>
+          <article class="card" data-reveal style="--rd:80ms">
+            <span class="card-label">Operators &amp; evaluators</span>
+            <h3 class="h-3">See why a segment is late.</h3>
+            <ul>
+              <li>Per-segment delay, split into 3-trip lag, peak, weather and dwell</li>
+              <li>Data-quality audit and SHA-256 checks on every model artifact</li>
+              <li>Designed for AIS-140 GPS feeds (on the roadmap)</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="section tight">
+      <div class="wrap">
+        <div class="cta-band" data-reveal>
           <div>
-            <span class="label">Validation state</span>
-            <strong id="eval-badge">Checking artifacts…</strong>
+            <h2 class="h-1">Watch NH-44 move.</h2>
+            <p>Run the corridor simulator. Change the hour, the rain or the lag behind, and watch the window respond.</p>
+          </div>
+          <div class="row">
+            <a class="btn btn-primary" href="/demo">Open the live demo <span class="arrow" aria-hidden="true">→</span></a>
+            <a class="btn btn-secondary" href="/model">Read the model card</a>
           </div>
         </div>
-      </div>
-
-      <div class="metric-grid" id="metric-grid">
-        <article class="metric"><h3 class="label">Model MAE</h3><p class="metric-value">--</p><p class="kpi-foot">Awaiting diagnostics</p></article>
-      </div>
-
-      <div class="eval-grid">
-        <section class="card" aria-labelledby="dq-title">
-          <header class="card-head">
-            <div class="card-title"><span class="label">Objective 1 · Data integrity</span><h2 id="dq-title">Data-quality gate funnel</h2></div>
-            <span class="tag ok" id="retention-tag">-- retention</span>
-          </header>
-          <div class="funnel" id="dq-funnel"></div>
-          <div class="gates" id="dq-gates"></div>
-        </section>
-
-        <section class="card" aria-labelledby="split-title">
-          <header class="card-head">
-            <div class="card-title"><span class="label">Objective 2 · Validation protocol</span><h2 id="split-title">Time-respecting split</h2></div>
-            <span class="tag mono">Days 1–24 → 25–30</span>
-          </header>
-          <div class="split">
-            <div class="split-bar" aria-hidden="true"><span class="split-train">Train · 80%</span><span class="split-test">Test · 20%</span></div>
-            <div class="split-labels"><span>Days 1–24 · 3,756 segments</span><span>Days 25–30 · 939 segments</span></div>
-          </div>
-          <ul class="checks" id="proof-list">
-            <li>No future leakage across the split boundary</li>
-            <li>5-fold TimeSeriesSplit cross-validation</li>
-            <li>Naive historical-average baseline comparison</li>
-            <li>Held-out future window scoring only</li>
-          </ul>
-        </section>
-
-        <section class="card" aria-labelledby="imp-title">
-          <header class="card-head">
-            <div class="card-title"><span class="label">Model interpretability</span><h2 id="imp-title">Global feature importance</h2></div>
-            <span class="tag">Random forest</span>
-          </header>
-          <div class="hbars" id="feature-importance"></div>
-        </section>
-
-        <section class="card" aria-labelledby="unc-title">
-          <header class="card-head">
-            <div class="card-title"><span class="label">Objective 3 · Uncertainty calibration</span><h2 id="unc-title">Peak vs off-peak interval width</h2></div>
-            <span class="tag warn mono">Quantile 10 / 90</span>
-          </header>
-          <div class="hbars uncertainty" id="uncertainty-visual"></div>
-          <p class="note" id="uncertainty-note">Loading calibration data from model metadata.</p>
-        </section>
-
-        <section class="card plot-card" aria-labelledby="plot-title">
-          <header class="card-head">
-            <div class="card-title"><span class="label">Phase 1 evidence</span><h2 id="plot-title">Pipeline diagnostics plot</h2></div>
-            <a class="link" id="plot-link" href="/assets/phase1_pipeline_diagnostics.png" target="_blank" rel="noreferrer">Open full size <span aria-hidden="true">↗</span></a>
-          </header>
-          <figure class="plot-frame" id="plot-frame">
-            <img id="diagnostic-plot" src="/assets/phase1_pipeline_diagnostics.png" alt="Phase 1 data pipeline diagnostics plot">
-            <figcaption id="diagnostic-caption">Data-quality gates, corridor telemetry distributions and cleaning funnel.</figcaption>
-          </figure>
-        </section>
-
-        <section class="card artifact-card" aria-labelledby="art-title">
-          <header class="card-head">
-            <div class="card-title"><span class="label">Artifact freeze</span><h2 id="art-title">Integrity inventory</h2></div>
-            <span class="tag ok" id="artifact-count">-- artifacts</span>
-          </header>
-          <table class="artifacts">
-            <thead><tr><th scope="col">Artifact</th><th scope="col" class="r">Size</th><th scope="col">SHA-256</th><th scope="col">Status</th></tr></thead>
-            <tbody id="artifact-table"></tbody>
-          </table>
-          <dl class="runtime" id="diag-runtime"><div><dt>Runtime</dt><dd>Unavailable</dd></div></dl>
-        </section>
       </div>
     </section>
   </main>
-
-  <footer class="footer">
-    <span>TransitPulse AI · Public transport tracking &amp; real-time delay prediction</span>
-    <span id="footer-mode">Live simulation · FastAPI + scikit-learn</span>
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="site-footer-grid">
+        <div class="foot-brand">
+          <img class="on-light" src="assets/logo/lockup-light.svg" alt="TransitPulse" width="156" height="48">
+          <img class="on-dark" src="assets/logo/lockup-dark.svg" alt="TransitPulse" width="156" height="48">
+          <p class="foot-note">Honest arrival windows for Punjab's tier-2 and intercity buses. A Smart India Hackathon prototype (SIH25013).</p>
+        </div>
+        <div><h2>Product</h2><ul>
+          <li><a href="/how-it-works">How it works</a></li>
+          <li><a href="/demo">Live demo</a></li>
+          <li><a href="/demo?view=evaluator">Evaluator view</a></li>
+        </ul></div>
+        <div><h2>Evidence</h2><ul>
+          <li><a href="/model">Model &amp; evaluation</a></li>
+          <li><a href="/model#caveats">Caveats</a></li>
+          <li><a href="/model#artifacts">Artifacts</a></li>
+        </ul></div>
+        <div><h2>Project</h2><ul>
+          <li><a href="/about">About &amp; roadmap</a></li>
+          <li><a href="/about#contact">Contact</a></li>
+          <li><a href="https://github.com/utkarsh777-wins/TransitPulse" rel="noreferrer">Source on GitHub</a></li>
+        </ul></div>
+      </div>
+      <div class="site-footer-bottom">
+        <span>Prototype · trained on generated telemetry · not an official operator service</span>
+        <span>NH-44 · Jalandhar → Phagwara · IST</span>
+      </div>
+    </div>
   </footer>
-
-  <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="standin.js"></script>
-  <script src="app.js"></script>
+  <script src="js/site.js"></script>
 </body>
 </html>

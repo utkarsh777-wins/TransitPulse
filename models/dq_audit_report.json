@@ -178,8 +178,8 @@
       {
         "name": "metadata",
         "file": "model_metadata.json",
-        "size_bytes": 909,
-        "sha256": "17e90faf4ce7171927061c03c3242ab43c522602a59f8824870c7796e3e2a064",
+        "size_bytes": 1305,
+        "sha256": "aa1d948f27d0f6d8dcfce633ed58cd1f869eb4da3cf1460f70972581ceebb8b0",
         "exists": true
       }
     ]

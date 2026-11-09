@@ -78,7 +78,46 @@ def test_health_and_simulate_use_frozen_models() -> None:
 
         page = client.get("/")
         assert page.status_code == 200
-        assert "TransitPulse" in page.text
+        assert "Arrival windows" in page.text
+
+        demo = client.get("/demo")
+        assert demo.status_code == 200
+        assert 'id="map"' in demo.text
+        assert "PROTOTYPE ONLY" not in demo.text
+        assert 'id="walk-slider"' in demo.text
+        assert 'id="eta-leave"' in demo.text
+
+        for path, needle in (
+            ("/how-it-works", "From a GPS ping"),
+            ("/model", "synthetic GPS"),
+            ("/about", "Utkarsh Kumar"),
+        ):
+            response = client.get(path)
+            assert response.status_code == 200, path
+            assert needle in response.text
+
+        evidence = client.get("/api/evidence")
+        assert evidence.status_code == 200
+        evidence_body = evidence.json()
+        coverage = evidence_body["interval_coverage"]
+        assert coverage is not None
+        assert 0.0 <= coverage["overall"] <= 1.0
+        ablation = evidence_body["ablation"]["metrics"]
+        assert ablation["reg_mae"] > 0
+        assert "reg_r2" in ablation
+
+        default_sim = client.post("/api/simulate", json=SIMULATION)
+        assert default_sim.status_code == 200
+        default_segment = default_sim.json()["segments"][0]
+        assert default_sim.json()["simulation"]["walk_time_min"] == 5.0
+        assert default_segment["leave_by_min"] == pytest.approx(
+            default_segment["window_start_min"] - 5.0, abs=0.05
+        )
+
+        custom = client.post("/api/simulate", json={**SIMULATION, "walk_time_min": 12})
+        custom_segment = custom.json()["segments"][0]
+        assert custom_segment["window_start_min"] == default_segment["window_start_min"]
+        assert custom_segment["leave_by_min"] == pytest.approx(custom_segment["window_start_min"] - 12.0, abs=0.05)
 
     assert {path: path.stat().st_mtime_ns for path in artifact_times} == artifact_times
 
@@ -92,8 +131,21 @@ def test_frontend_api_urls_are_relative() -> None:
     assert "API calls must be relative" in script
 
 
+def test_pages_do_not_ship_placeholders() -> None:
+    about = (ROOT / "web" / "about.html").read_text(encoding="utf-8")
+    demo = (ROOT / "web" / "demo.html").read_text(encoding="utf-8")
+    model = (ROOT / "web" / "model.html").read_text(encoding="utf-8")
+    assert "team@example.com" not in about
+    assert "Team member name" not in about
+    assert "Utkarsh Kumar" in about
+    assert "github.com/utkarsh777-wins" in about
+    assert "PROTOTYPE ONLY" not in demo
+    assert "not in repo" not in model
+    assert "not measured yet" not in model
+
+
 def test_standin_fallback_is_labeled() -> None:
-    page = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    page = (ROOT / "web" / "demo.html").read_text(encoding="utf-8")
     script = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
     assert "Stand-in fallback" in page
     assert "not the trained model" in page

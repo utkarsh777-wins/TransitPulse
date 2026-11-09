@@ -12,6 +12,7 @@ import joblib
 import pandas as pd
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -134,6 +135,7 @@ class SimulationRequest(BaseModel):
     prev_stop_dwell_sec: float = Field(default=30.0, ge=15.0, le=120.0)
     gps_speed_kmh: float = Field(default=30.0, ge=2.0, le=95.0)
     day_of_week: int | None = Field(default=None, ge=0, le=6)
+    walk_time_min: float = Field(default=5.0, ge=0.0, le=30.0)
 
 
 def clamp(value: float, lower: float, upper: float) -> float:
@@ -413,11 +415,18 @@ def segment_inference(models: dict[str, Any], request: SimulationRequest) -> dic
         ]
 
         cumulative_delay += point_delay
+        # Leave-by is the published window start (scheduled time + lower delay
+        # bound, in minutes from now) minus the rider's walk time.
+        window_start_min = round(max(segment["scheduled_time_min"] + lower, 0.0), 1)
+        leave_by_min = round(window_start_min - request.walk_time_min, 1)
         segment_payload = {
             **build_segment_record(segment),
             "predicted_delay_min": point_delay,
             "lower_bound_min": lower,
             "upper_bound_min": upper,
+            "window_start_min": window_start_min,
+            "walk_time_min": request.walk_time_min,
+            "leave_by_min": leave_by_min,
             "interval_width_min": width,
             "delay_status": status,
             "status_color": STATUS_COLORS[status],
@@ -555,6 +564,60 @@ def get_corridor() -> dict[str, Any]:
 @app.post("/api/simulate")
 def simulate(request: SimulationRequest) -> dict[str, Any]:
     return segment_inference(app.state.models, request)
+
+
+@app.get("/api/evidence")
+def evidence() -> dict[str, Any]:
+    """Held-out metrics, interval coverage, and the gps-speed ablation."""
+    metadata = app.state.models["metadata"]
+    audit = app.state.models["audit"]
+    ablation_path = MODELS_DIR / "ablation.json"
+    ablation = json.loads(ablation_path.read_text(encoding="utf-8")) if ablation_path.is_file() else None
+    return {
+        "metrics": metadata.get("metrics", {}),
+        "uncertainty": metadata.get("uncertainty", {}),
+        "interval_coverage": metadata.get("interval_coverage"),
+        "ablation": ablation,
+        "artifacts": audit.get("verification", {}).get("artifact_inventory", []),
+        "synthetic": {
+            "source": "notebooks/01_phase1_data_pipeline.ipynb",
+            "seed": 42,
+            "corridor": "NH-44 Jalandhar–Phagwara, 6 stops",
+            "note": (
+                "Training data is synthetic. Held-out scores describe that generated "
+                "table only. They are not a measure of real-world accuracy."
+            ),
+        },
+    }
+
+
+def _page(filename: str) -> FileResponse:
+    return FileResponse(WEB_DIR / filename)
+
+
+@app.get("/", include_in_schema=False)
+def page_home() -> FileResponse:
+    return _page("index.html")
+
+
+@app.get("/how-it-works", include_in_schema=False)
+def page_how() -> FileResponse:
+    return _page("how-it-works.html")
+
+
+@app.get("/demo", include_in_schema=False)
+def page_demo() -> FileResponse:
+    return _page("demo.html")
+
+
+@app.get("/model", include_in_schema=False)
+def page_model() -> FileResponse:
+    return _page("model.html")
+
+
+@app.get("/about", include_in_schema=False)
+def page_about() -> FileResponse:
+    return _page("about.html")
 
 
 @app.get("/api/diagnostics")

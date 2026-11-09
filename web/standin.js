@@ -97,6 +97,9 @@
         simulated_speed_kmh: Math.round(clamp(0.65 * spd + 0.35 * segSpeed, 5, 85) * 10) / 10,
         estimated_segment_time_min: r2(sched + Math.max(pred, 0)),
         scheduled_start_offset_min: r2(cumSched), cumulative_delay_min: r2(cumDelay),
+        window_start_min: r2(Math.max(sched + lower, 0)),
+        walk_time_min: Number(req.walk_time_min ?? 5),
+        leave_by_min: r2(Math.max(sched + lower, 0) - Number(req.walk_time_min ?? 5)),
       };
       cumSched += sched;
       out.scheduled_arrival_offset_min = r2(cumSched);

@@ -25,5 +25,15 @@
     "historical_segment_avg_min": 0.0025016106634044785,
     "scheduled_time_min": 0.0024294501777665225,
     "is_weekend": 0.0004799823662029715
+  },
+  "interval_coverage": {
+    "test_days": "25-30",
+    "n_test": 945,
+    "n_peak": 332,
+    "n_off_peak": 613,
+    "overall": 0.8698,
+    "peak": 0.8916,
+    "off_peak": 0.8581,
+    "definition": "Share of held-out rows whose actual delay falls inside the published interval: centred on the point prediction, half-width max(0.6, (q90-q10)/2) times 1.35 at peak, lower bound floored at -1.0, then rounded to 0.1 min."
   }
 }
