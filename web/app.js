@@ -136,18 +136,29 @@ async function fetchJson(url, options = {}) {
   return response.json();
 }
 const FORCE_STANDIN = window.location.protocol === "file:" || params.has("standin");
+function setFooterMode(text) {
+  if (!dom.footerMode) return;
+  dom.footerMode.textContent = text || "";
+  dom.footerMode.hidden = !text;
+}
 function activateStandin() {
   state.standin = true;
-  if (dom.standinBanner) dom.standinBanner.dataset.mode = "standin";
+  if (dom.standinBanner) {
+    dom.standinBanner.dataset.mode = "standin";
+    dom.standinBanner.hidden = false;
+  }
   if (dom.syncPill) dom.syncPill.title = "Stand-in fallback: in-browser heuristic, not the trained model.";
-  dom.footerMode.textContent = "Stand-in model · runs in your browser, not the trained model";
+  setFooterMode("Stand-in model · runs in your browser, not the trained model");
 }
 async function api(url, options = {}) {
   const path = apiPath(url);
   if (!FORCE_STANDIN && !state.standin) {
     try {
       const data = await fetchJson(path, options);
-      if (dom.standinBanner && dom.standinBanner.dataset.mode === "pending") dom.standinBanner.dataset.mode = "live";
+      if (dom.standinBanner) {
+        dom.standinBanner.dataset.mode = "live";
+        dom.standinBanner.hidden = true;
+      }
       return data;
     }
     catch (error) { if (!window.TPStandIn) throw error; }
@@ -160,7 +171,7 @@ async function api(url, options = {}) {
   if (path.startsWith("/api/diagnostics")) return S.diagnostics();
   throw new Error(`Stand-in has no route for ${path}`);
 }
-const okLabel = () => (state.standin ? "Stand-in fallback" : "Scenario model");
+const okLabel = () => (state.standin ? "Stand-in fallback" : "Connected");
 
 /* ---------------------------------------------------------------- theme */
 function currentTheme() { return document.documentElement.dataset.theme === "dark" ? "dark" : "light"; }
@@ -348,7 +359,7 @@ function renderStats() {
   dom.statDelay.textContent = signed(corridor.total_predicted_delay_min);
   dom.statDelayFoot.innerHTML = `<b>${Number(corridor.estimated_trip_time_min).toFixed(1)}</b> min trip · ${Number(corridor.scheduled_time_min).toFixed(1)} scheduled`;
   dom.statConfidence.textContent = Number(state.simulation.walk_time_min ?? 5).toFixed(0);
-  dom.statConfidenceFoot.textContent = "min walk used for leave-by";
+  dom.statConfidenceFoot.textContent = "walk used for leave-by";
   if (selected) {
     const story = etaStory(selected);
     setFlap(dom.statEta, story.flap);
@@ -834,11 +845,13 @@ function switchView(view) {
   Object.entries(dom.views).forEach(([key, el]) => { el.hidden = key !== view; });
   document.body.dataset.view = view;
   if (document.documentElement.dataset.demo === "error") {
-    dom.footerMode.textContent = "Corridor service unavailable · nothing on this page is current";
+    setFooterMode("Corridor service unavailable · nothing on this page is current");
   } else if (state.standin) {
-    dom.footerMode.textContent = "Stand-in model · runs in your browser, not the trained model";
+    setFooterMode("Stand-in model · runs in your browser, not the trained model");
+  } else if (view === "live") {
+    setFooterMode("");
   } else {
-    dom.footerMode.textContent = view === "live" ? "Scenario model · not a live GPS feed" : "Evaluator audit · frozen artifacts + validation proof";
+    setFooterMode("Evaluator audit · frozen artifacts + validation proof");
   }
   setSheet(false);
   if (view === "live" && state.map) window.setTimeout(() => { state.map.invalidateSize(); fitCorridor(); }, 60);
@@ -995,7 +1008,7 @@ function downloadCsv(filename, rows) {
 function downloadScenarioCsv() {
   if (!state.result) return;
   const sim = state.result.simulation || {};
-  const rows = [["field", "value"], ["provenance", "POST /api/simulate for this scenario. Not a live GPS feed."], ["hour_of_day", sim.hour_of_day], ["weather_severity", sim.weather_severity], ["upstream_lag_min", sim.rolling_3trip_delay_min], ["walk_min", sim.walk_time_min], ["gps_speed_kmh", sim.gps_speed_kmh]];
+  const rows = [["field", "value"], ["provenance", "POST /api/simulate for this scenario."], ["hour_of_day", sim.hour_of_day], ["weather_severity", sim.weather_severity], ["upstream_lag_min", sim.rolling_3trip_delay_min], ["walk_min", sim.walk_time_min], ["gps_speed_kmh", sim.gps_speed_kmh]];
   rows.push(["segment", "from", "to", "scheduled_arrival_min", "arrives_in_min", "delay_min", "shifted_band_low_min", "shifted_band_high_min", "leave_by_min", "status"]);
   state.result.segments.forEach((segment) => {
     const view = arrivalView(segment);
@@ -1086,7 +1099,12 @@ function setDemoState(kind) {
   if (mainEl) mainEl.setAttribute("aria-busy", String(kind === "loading" || kind === "skeleton"));
   const card = $("demo-error");
   if (card) card.hidden = kind !== "error";
-  if (kind === "error" && dom.footerMode) dom.footerMode.textContent = "Corridor service unavailable · nothing on this page is current";
+  if (kind === "error") {
+    if (dom.standinBanner) dom.standinBanner.hidden = false;
+    setFooterMode("Corridor service unavailable · nothing on this page is current");
+  } else if (dom.standinBanner && dom.standinBanner.dataset.mode === "live") {
+    dom.standinBanner.hidden = true;
+  }
 }
 /* r3: offline marks every value as stale: dimmed, with an "as of" time under the KPI row. */
 function goOffline() {
@@ -1096,7 +1114,7 @@ function goOffline() {
   document.documentElement.dataset.demoStale = "1";
   const note = $("stale-note");
   if (note) { note.hidden = false; note.textContent = `Offline · values as of ${t} IST, not updating`; }
-  if (dom.footerMode) dom.footerMode.textContent = `Offline · last result from ${t} IST`;
+  setFooterMode(`Offline · last result from ${t} IST`);
   /* r4: the rider card and the live-status KPI carry their own "as of" stamp (CSS ::after), so a
      re-render of their text can't drop it. */
   [dom.etaKicker, dom.statStatusFoot].forEach((el) => { if (el) el.dataset.asof = t; });

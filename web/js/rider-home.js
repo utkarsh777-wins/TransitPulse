@@ -27,15 +27,13 @@
     return "Close to schedule";
   }
   function action(segment, walk) {
-    var leave = Number(segment.leave_by_min);
-    var when = leave > 0.05 ? "Leave in " + leave.toFixed(1) + " min" : "Leave now";
     var walkMin = Math.round(Number(walk));
     var article = walkMin === 8 || walkMin === 11 || walkMin === 18 ? "an" : "a";
-    var walkBit = " for " + article + " " + walkMin + " min walk";
-    if (segment.delay_status === "Severe Delay") return when + walkBit + ". This stop is running severely late.";
-    if (segment.delay_status === "Moderate Delay") return when + walkBit + ". This stop is late.";
-    if (segment.is_low_confidence) return when + walkBit + ". The arrival range is wide, so the midpoint is not an exact time.";
-    return when + walkBit + ". This stop is close to the schedule.";
+    var lead = "For " + article + " " + walkMin + " min walk";
+    if (segment.delay_status === "Severe Delay") return lead + ". This stop is running severely late.";
+    if (segment.delay_status === "Moderate Delay") return lead + ". This stop is late.";
+    if (segment.is_low_confidence) return lead + ". The arrival range is wide, so the midpoint is not an exact time.";
+    return lead + ". This stop is close to the schedule.";
   }
   function show(result) {
     var preset = PRESETS[presetName];
@@ -66,7 +64,7 @@
   function fail() {
     $("ops-stop").textContent = "Model unavailable";
     $("ops-status").textContent = "Not loaded";
-    $("ops-action").textContent = "The scenario model did not answer. Open the corridor page to retry.";
+    $("ops-action").textContent = "The model did not answer. Open the corridor page to retry.";
   }
   function load() {
     setPressed();
