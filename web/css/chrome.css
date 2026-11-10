@@ -111,8 +111,8 @@ body[data-app] .card { --focus-inner: var(--surface); }
 /* ---------- Mobile menu: full-screen fixed layer = panel + scrim ----------
    Open: main/footer (every body child except the header) get `inert`, <html> gets overflow:hidden,
    the panel fades in and drops 8 px → 0 in 200 ms ease-out; out in 150 ms ease-in.
-   Closes on Esc, scrim tap, link tap, and when the viewport grows past 900 px. */
-@media (max-width: 899.98px) {
+   Closes on Esc, scrim tap, link tap, and when the viewport grows past 1100 px (r3: was 900). */
+@media (max-width: 1099.98px) {
   .site-menu-btn { display: inline-grid; }
   .site-nav {
     position: fixed; z-index: 2; top: var(--header-h); left: 0; right: 0;
@@ -138,7 +138,7 @@ body[data-app] .card { --focus-inner: var(--surface); }
   .site-nav .site-nav-cta { margin-top: 16px; border: 0; justify-content: center; border-radius: var(--r-md); padding: 8px 20px; font-size: var(--fs-16); }
 }
 html.menu-open { overflow: hidden; }
-@media (min-width: 900px) { .site-nav .site-nav-cta { display: none; } }
+@media (min-width: 1100px) { .site-nav .site-nav-cta { display: none; } }
 @media (max-width: 479.98px) {
   .site-actions .site-cta { display: none; }
   .site-brand img { height: 48px; margin: -8px -4px -8px -8px; }
@@ -176,3 +176,6 @@ html.theme-fade, html.theme-fade *, html.theme-fade *::before, html.theme-fade *
   .site-nav { transform: none !important; }
 }
 .site-nav a.site-nav-cta, .site-nav a.site-nav-cta:hover { color: var(--on-accent); background: var(--accent); font-weight: 600; }
+
+/* r3: the desktop nav appears only from 1100 px (it wrapped to 2 lines at 900–1099); labels and the CTA never wrap. */
+.site-nav a, .site-cta, .site-actions a, .site-actions .btn { white-space: nowrap; }

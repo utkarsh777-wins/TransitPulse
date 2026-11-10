@@ -268,6 +268,7 @@ async function runSimulation() {
     const result = await api("/api/simulate", { method: "POST", body: JSON.stringify(state.simulation) });
     if (sequence !== state.requestSeq) return;
     state.result = result;
+    state.lastResultAt = new Date();
     applySimulation(result);
     if (navigator.onLine === false || FORCED_STATE === "offline") goOffline(); else setSyncState(state.standin ? "standin" : "ok", okLabel());
   } catch (error) {
@@ -517,11 +518,14 @@ function initMap(corridor) {
     const coords = [[segment.start_lat, segment.start_lon], [segment.end_lat, segment.end_lon]];
     const casing = L.polyline(coords, { color: cssVar("--map-casing"), weight: 10, opacity: 1, lineCap: "round", interactive: false }).addTo(state.map);
     const main = L.polyline(coords, { color: cssVar("--ontime"), weight: 5, opacity: 1, lineCap: "round", className: "route-line" }).addTo(state.map);
-    main.bindTooltip(`SEG ${String(segment.segment_id).padStart(2, "0")} · ${escapeHtml(routeName(segment.name))} · ${segment.distance_km} km`, { sticky: true, className: "tp-tip" });
+    main.bindTooltip(`SEG ${String(segment.segment_id).padStart(2, "0")} · ${escapeHtml(routeName(segment.name))} · ${segment.distance_km} km`, { sticky: true, direction: "auto", className: "tp-tip" });
+    /* r3: route lines stay mouse/touch-interactive but leave the Tab order. Segments are reachable by
+       keyboard through the segment list, which has names and a visible ring (SVG paths can't show one). */
     main.on("click", () => selectSegment(segment.segment_id));
     state.segmentLayers[segment.segment_id] = { casing, main };
   });
 
+  unfocusRoutePaths();
   corridor.stops.forEach((stop) => {
     const terminal = stop.stop_id === 0 || stop.stop_id === corridor.stops.length - 1;
     const icon = L.divIcon({
@@ -761,13 +765,71 @@ function applyPreset(name) {
   showToast(`Scenario loaded: ${PRESET_LABELS[name]}`);
 }
 
+/* r3: route lines stay mouse/touch-interactive but leave the Tab order and the accessibility tree.
+   Segments are reachable by keyboard through the segment list (named, with a visible ring); an SVG
+   path can't paint the box-shadow ring. */
+function unfocusRoutePaths() {
+  document.querySelectorAll("#map path.leaflet-interactive").forEach((el) => {
+    el.setAttribute("tabindex", "-1"); el.setAttribute("aria-hidden", "true"); el.setAttribute("focusable", "false");
+  });
+}
+
 /* ---------------------------------------------------------------- phone sheet */
 const phoneQuery = window.matchMedia("(max-width: 639.98px)");
+const controlsBody = $("controls-body");
 function setSheet(open) {
   const isPhone = phoneQuery.matches;
   dom.controls.classList.toggle("is-open", open && isPhone);
   dom.sheetToggle.setAttribute("aria-expanded", String(open && isPhone));
   dom.sheetBackdrop.hidden = !(open && isPhone);
+  /* r3: a collapsed phone sheet takes its controls out of the Tab order and the accessibility tree
+     (WCAG 2.4.11). The handle and #play-toggle stay reachable; from 640 up the card is always open. */
+  if (controlsBody) controlsBody.inert = isPhone && !open;
+  /* r4: an open phone sheet is modal, like the site menu (js/site.js setInert): everything outside it
+     (skip link, header, demo bar, the rest of main, footer) is inert, so Tab and Shift+Tab cycle inside
+     the sheet, and the page behind it stops scrolling. Esc / backdrop / handle close it. */
+  setSheetModal(open && isPhone);
+}
+const sheetInerted = new Set();
+function setSheetModal(on) {
+  sheetInerted.forEach((el) => el.removeAttribute("inert"));
+  sheetInerted.clear();
+  const card = dom.controls;
+  if (on && card) {
+    for (let node = card; node && node !== document.body; node = node.parentElement) {
+      const parent = node.parentElement;
+      if (!parent) break;
+      Array.prototype.forEach.call(parent.children, (sib) => {
+        if (sib === node || sib.tagName === "SCRIPT" || sib === dom.sheetBackdrop || sib.id === "toast" || sib.hasAttribute("inert")) return;
+        sib.setAttribute("inert", ""); sheetInerted.add(sib);
+      });
+    }
+    card.setAttribute("role", "dialog"); card.setAttribute("aria-modal", "true");
+  } else if (card) {
+    card.removeAttribute("role"); card.removeAttribute("aria-modal");
+  }
+  document.documentElement.classList.toggle("sheet-open", on);
+}
+/* r4: Tab past the last control wraps to the handle, Shift+Tab before the handle wraps to the last
+   control, so focus never leaves the open sheet for the browser chrome. */
+const SHEET_FOCUSABLE = 'button:not([disabled]), input:not([disabled]), select, textarea, a[href], [tabindex]:not([tabindex="-1"])';
+function trapSheetTab(e) {
+  if (e.key !== "Tab" || !document.documentElement.classList.contains("sheet-open")) return;
+  const items = Array.from(dom.controls.querySelectorAll(SHEET_FOCUSABLE)).filter((el) => !el.closest("[inert],[hidden]") && el.getClientRects().length);
+  if (!items.length) return;
+  const first = items[0], last = items[items.length - 1];
+  const inside = dom.controls.contains(document.activeElement);
+  if (e.shiftKey && (document.activeElement === first || !inside)) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && (document.activeElement === last || !inside)) { e.preventDefault(); first.focus(); }
+}
+document.addEventListener("keydown", trapSheetTab);
+/* The peek height follows the real header height (it grows at 200 % text), so the head is never cut off. */
+function syncSheetPeek() {
+  const head = dom.controls && dom.controls.querySelector(".controls-head");
+  if (!head) return;
+  const h = phoneQuery.matches ? Math.ceil(head.getBoundingClientRect().height) : 0;
+  if (h) document.documentElement.style.setProperty("--sheet-peek", `${h}px`);
+  else document.documentElement.style.removeProperty("--sheet-peek");
 }
 
 /* ---------------------------------------------------------------- views */
@@ -780,7 +842,9 @@ function switchView(view) {
   });
   Object.entries(dom.views).forEach(([key, el]) => { el.hidden = key !== view; });
   document.body.dataset.view = view;
-  if (state.standin) {
+  if (document.documentElement.dataset.demo === "error") {
+    dom.footerMode.textContent = "Corridor service unavailable · nothing on this page is current";
+  } else if (state.standin) {
     dom.footerMode.textContent = "Stand-in model · runs in your browser, not the trained model";
   } else {
     dom.footerMode.textContent = view === "live" ? "Live simulation · FastAPI + scikit-learn" : "Evaluator audit · frozen artifacts + validation proof";
@@ -815,9 +879,13 @@ function bindEvents() {
     if (item) selectSegment(Number(item.dataset.segmentId), true);
   });
   dom.sheetToggle.addEventListener("click", () => { if (phoneQuery.matches) setSheet(!dom.controls.classList.contains("is-open")); });
-  dom.sheetBackdrop.addEventListener("click", () => setSheet(false));
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") setSheet(false); });
-  phoneQuery.addEventListener("change", () => setSheet(false));
+  dom.sheetBackdrop.addEventListener("click", () => { setSheet(false); dom.sheetToggle.focus({ preventScroll: true }); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || !dom.controls.classList.contains("is-open")) return;
+    setSheet(false); dom.sheetToggle.focus();
+  });
+  phoneQuery.addEventListener("change", () => { setSheet(false); syncSheetPeek(); });
+  if (window.ResizeObserver) new ResizeObserver(syncSheetPeek).observe(dom.controls.querySelector(".controls-head"));
   window.addEventListener("resize", () => { if (state.tilesFailed) renderFallback(); });
 }
 
@@ -937,13 +1005,39 @@ async function loadDiagnostics() {
 const FORCED_STATE = params.get("state");
 function setDemoState(kind) {
   document.documentElement.dataset.demo = kind;
+  const mainEl = document.getElementById("main");
+  if (mainEl) mainEl.setAttribute("aria-busy", String(kind === "loading" || kind === "skeleton"));
   const card = $("demo-error");
   if (card) card.hidden = kind !== "error";
+  if (kind === "error" && dom.footerMode) dom.footerMode.textContent = "Corridor service unavailable · nothing on this page is current";
 }
-function goOffline() { setSyncState("offline", "Offline · showing the last result"); }
+/* r3: offline marks every value as stale: dimmed, with an "as of" time under the KPI row. */
+function goOffline() {
+  setSyncState("offline", "Offline · showing the last result");
+  const asOf = state.lastResultAt || new Date();
+  const t = asOf.toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour12: false });
+  document.documentElement.dataset.demoStale = "1";
+  const note = $("stale-note");
+  if (note) { note.hidden = false; note.textContent = `Offline · values as of ${t} IST, not updating`; }
+  if (dom.footerMode) dom.footerMode.textContent = `Offline · last result from ${t} IST`;
+  /* r4: the rider card and the live-status KPI carry their own "as of" stamp (CSS ::after), so a
+     re-render of their text can't drop it. */
+  [dom.etaKicker, dom.statStatusFoot].forEach((el) => { if (el) el.dataset.asof = t; });
+  /* r4: the bus position is extrapolated from the last result, so offline it stops moving; it resumes
+     when the connection returns if it was playing before. */
+  if (state.playing) { state.resumeOnline = true; togglePlayback(); }
+}
+function clearStale() {
+  [dom.etaKicker, dom.statStatusFoot].forEach((el) => { if (el) delete el.dataset.asof; });
+  if (state.resumeOnline && !state.playing) togglePlayback();
+  state.resumeOnline = false;
+  delete document.documentElement.dataset.demoStale;
+  const note = $("stale-note");
+  if (note) note.hidden = true;
+}
 function bindConnectivity() {
   window.addEventListener("offline", goOffline);
-  window.addEventListener("online", () => { if (state.corridor) scheduleSimulation(40); else retryBoot(); });
+  window.addEventListener("online", () => { clearStale(); switchView(document.body.dataset.view || "live"); if (state.corridor) scheduleSimulation(40); else retryBoot(); });
   const retry = $("demo-retry");
   if (retry) retry.addEventListener("click", retryBoot);
 }
@@ -952,7 +1046,7 @@ async function retryBoot() {
   setSyncState("busy", "Retrying");
   const t = window.setTimeout(() => { if (document.documentElement.dataset.demo === "loading") setDemoState("skeleton"); }, 300);
   try {
-    if (!state.corridor) { state.corridor = await api("/api/corridor"); initMap(state.corridor); loadDiagnostics(); }
+    if (!state.corridor) { state.corridor = await api("/api/corridor"); await loadLeaflet(); initMap(state.corridor); loadDiagnostics(); }
     await runSimulation();
     window.clearTimeout(t);
     if (state.result) setDemoState("ready"); else setDemoState("error");
@@ -964,8 +1058,37 @@ async function retryBoot() {
 }
 
 /* ---------------------------------------------------------------- boot */
+/* r4 · LCP: Leaflet (147 kB JS + its CSS) no longer blocks first paint or app.js; it loads on demand and
+   the map waits for it. */
+let leafletReady = null;
+function loadLeaflet() {
+  if (window.L) return Promise.resolve();
+  if (!leafletReady) leafletReady = Promise.all([
+    new Promise((resolve) => {
+      const css = document.createElement("link");
+      css.rel = "stylesheet"; css.href = "vendor/leaflet-1.9.4/leaflet.css";
+      css.onload = css.onerror = () => resolve();
+      /* before the bundle, so the demo's Leaflet overrides keep winning */
+      document.head.insertBefore(css, document.querySelector('link[rel="stylesheet"]'));
+    }),
+    new Promise((resolve) => {
+      const s = document.createElement("script");
+      s.src = "vendor/leaflet-1.9.4/leaflet.js";
+      s.onload = s.onerror = () => resolve();
+      document.head.appendChild(s);
+    }),
+  ]);
+  return leafletReady;
+}
+/* Leaflet starts once the corridor answer has set the status line, the page has loaded and that frame has painted (+150 ms), so the
+   147 kB map library never competes with the first meaningful paint (the map shows its skeleton meanwhile). */
+const afterFirstPaint = () => new Promise((resolve) => {
+  const frames = () => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 150)));
+  if (document.readyState === "complete") frames(); else window.addEventListener("load", frames, { once: true });
+});
 async function init() {
   setDemoState("loading");
+  setSheet(false); syncSheetPeek();
   const skeletonTimer = window.setTimeout(() => { if (document.documentElement.dataset.demo === "loading") setDemoState("skeleton"); }, 300);
   bindConnectivity();
   if (FORCED_STATE === "loading") { window.clearTimeout(skeletonTimer); setDemoState("skeleton"); bindTheme(); startClock(); return; }
@@ -981,6 +1104,8 @@ async function init() {
   try {
     const corridor = await api("/api/corridor");
     state.corridor = corridor;
+    await afterFirstPaint();
+    await loadLeaflet();
     initMap(corridor);
   } catch (error) {
     window.clearTimeout(skeletonTimer);
@@ -995,6 +1120,6 @@ async function init() {
   if (FORCED_STATE === "offline" || navigator.onLine === false) goOffline();
   if (params.get("sheet") === "open") setSheet(true);
   window.requestAnimationFrame(animateBus);
-  window.setTimeout(() => { declutterLabels(true); document.documentElement.dataset.ready = "1"; }, 400);
+  window.setTimeout(() => { declutterLabels(true); unfocusRoutePaths(); document.documentElement.dataset.ready = "1"; }, 400);
 }
 init();

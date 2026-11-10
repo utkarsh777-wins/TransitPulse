@@ -23,12 +23,10 @@
   <link rel="icon" href="assets/logo/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/logo/app-icon.svg">
   <link rel="preconnect" href="https://server.arcgisonline.com">
-  <link rel="stylesheet" href="vendor/fonts/fonts.css">
-  <link rel="stylesheet" href="vendor/leaflet-1.9.4/leaflet.css">
-  <link rel="stylesheet" href="css/tokens.css">
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="css/chrome.css">
-  <link rel="stylesheet" href="css/demo-bridge.css">
+  <link rel="preload" href="vendor/fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="vendor/fonts/geist-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/demo.bundle.css">
+  <noscript><style>html[data-demo] main > * { visibility: visible !important; animation: none !important; } .demo-skeleton { display: none !important; }</style></noscript>
 </head>
 <body data-view="live" data-app>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -64,7 +62,7 @@
        between pending / live / stand-in never moves the page (CLS). -->
   <p class="standin-banner" id="standin-banner" data-mode="pending" aria-live="polite">
     <span class="sb-standin"><strong>Stand-in fallback.</strong> The API is unreachable, so these numbers are an in-browser heuristic, not the trained model.</span>
-    <span class="sb-alt sb-pending">Connecting to the model API…</span>
+    <span class="sb-alt sb-pending"><strong>Connecting to the model API…</strong> If it can't be reached, an in-browser heuristic will stand in for the trained model.</span>
     <span class="sb-alt sb-live"><strong>Live model.</strong> Predictions come from the trained model via /api/simulate.</span>
     <span class="sb-alt sb-error"><strong>Corridor data unavailable.</strong> See the message below.</span>
   </p>
@@ -111,6 +109,16 @@
         <a class="btn btn-secondary" href="/demo?standin=1">Use the stand-in model</a>
       </div>
     </section>
+    <!-- r3: first-paint skeleton. Pure CSS: shown from the first frame while html[data-demo] is
+         loading|skeleton (fades in after 300 ms so fast loads never flash), removed when app.js sets ready. -->
+    <div class="demo-skeleton" aria-hidden="true">
+      <div class="sk-kpis"><i></i><i></i><i></i><i></i></div>
+      <div class="sk-split">
+        <div class="sk-map"><svg viewBox="0 0 600 300" preserveAspectRatio="xMidYMid meet"><polyline points="116.5,40 172.9,55.9 209.9,73.9 293,144.7 348.2,184.6 483.5,260"/><g><circle cx="116.5" cy="40" r="6"/><circle cx="172.9" cy="55.9" r="6"/><circle cx="209.9" cy="73.9" r="6"/><circle cx="293" cy="144.7" r="6"/><circle cx="348.2" cy="184.6" r="6"/><circle cx="483.5" cy="260" r="6"/></g></svg></div>
+        <div class="sk-card"><b></b><b class="w60"></b><b class="big"></b><b class="w80"></b><b class="w40"></b></div>
+      </div>
+      <div class="sk-wide"><b class="w40"></b><b></b><b></b><b></b></div>
+    </div>
     <!-- ============================================================ LIVE -->
     <section class="view view-live" id="view-live" role="tabpanel" aria-labelledby="tab-live">
       <div class="kpis area-kpis" aria-label="Corridor summary">
@@ -134,6 +142,7 @@
           <p class="kpi-value kpi-status"><span class="status-dot" id="stat-status-dot" aria-hidden="true"></span><span id="stat-status">--</span></p>
           <p class="kpi-foot" id="stat-status-foot">Classifier output</p>
         </article>
+        <p class="stale-note src-tag" id="stale-note" role="status" hidden></p>
       </div>
 
       <section class="card map-card area-map" aria-labelledby="map-title">
@@ -239,7 +248,7 @@
             </div>
             <span class="tag mono" id="xai-segment">SEG 01</span>
           </header>
-          <div class="xai-row xai-axis" aria-hidden="true"><span></span><span class="xai-axis-labels"><span>− Saves</span><span>Adds +</span></span><span></span></div>
+          <div class="xai-row xai-axis" aria-hidden="true"><span></span><span class="xai-axis-labels"><span class="nw">−&nbsp;Saves</span><span class="nw">Adds&nbsp;+</span></span><span></span></div>
           <div class="xai-bars" id="xai-bars" role="list" aria-label="Local feature attribution in minutes"></div>
           <div class="xai-sum" id="xai-sum"></div>
           <p class="footnote">Neutral baseline <strong class="mono" id="xai-baseline">--</strong>. Local leave-one-out attribution, in minutes: each bar is the change in predicted delay when that factor is added back.</p>
@@ -420,7 +429,7 @@
             <a class="link" id="plot-link" href="assets/phase1_pipeline_diagnostics.png" target="_blank" rel="noreferrer">Open full size <span aria-hidden="true">↗</span></a>
           </header>
           <figure class="plot-frame" id="plot-frame">
-            <img id="diagnostic-plot" src="assets/phase1_pipeline_diagnostics.png" alt="Phase 1 data pipeline diagnostics plot">
+            <img id="diagnostic-plot" loading="lazy" decoding="async" src="assets/phase1_pipeline_diagnostics.png" alt="Phase 1 data pipeline diagnostics plot">
             <figcaption id="diagnostic-caption">Data-quality gates, corridor telemetry distributions and cleaning funnel.</figcaption>
           </figure>
         </section>
@@ -474,7 +483,6 @@
   <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script defer src="vendor/leaflet-1.9.4/leaflet.js"></script>
   <script defer src="standin.js"></script>
   <script defer src="app.js"></script>
   <script defer src="js/site.js"></script>

@@ -18,10 +18,9 @@
   </script>
   <link rel="icon" href="assets/logo/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/logo/app-icon.svg">
-  <link rel="stylesheet" href="vendor/fonts/fonts.css">
-  <link rel="stylesheet" href="css/tokens.css">
-  <link rel="stylesheet" href="css/chrome.css">
-  <link rel="stylesheet" href="css/site.css">
+  <link rel="preload" href="vendor/fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="vendor/fonts/geist-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/site.bundle.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -74,7 +73,7 @@
         <figure class="frame" data-reveal style="--rd:220ms" aria-label="Example rider card for Haveli Corridor stop">
           <div class="frame-bar" aria-hidden="true">
             <span class="dots"><i></i><i></i><i></i></span>
-            <span class="url">transitpulse · rider view · NH-44</span>
+            <span class="url"><span class="u-long">transitpulse · rider view · NH-44</span><span class="u-short">rider view · NH-44</span></span>
           </div>
           <div class="frame-body">
             <div class="frame-main">
@@ -213,7 +212,7 @@
           <li class="rail-step" style="--rd:120ms"><div class="node"><b>02</b></div><h3>Quality gates</h3><p>Geofence, speed sanity, dwell imputation and duplicate removal.</p><p class="mono-sub">4 gates · 97.81% kept</p></li>
           <li class="rail-step" style="--rd:240ms"><div class="node"><b>03</b></div><h3>Delay model</h3><p>Random-forest regressor and classifier over 12 features.</p><p class="mono-sub">RF · days 1–24 train</p></li>
           <li class="rail-step" style="--rd:360ms"><div class="node"><b>04</b></div><h3>Window</h3><p>10th and 90th percentile models set the range. Peak hours widen it.</p><p class="mono-sub">q10 / q90 · ×1.35 at peak</p></li>
-          <li class="rail-step is-out" style="--rd:480ms"><div class="node"><b>05</b></div><h3>Rider guidance</h3><p>Arrival window, confidence, status and a leave-by time.</p><p class="mono-sub">leave_by_min from POST /api/simulate</p></li>
+          <li class="rail-step is-out" style="--rd:480ms"><div class="node"><b>05</b></div><h3>Rider guidance</h3><p>Arrival window, confidence, status and a leave-by time.</p><p class="mono-sub">leave_by_min from POST /api/<wbr>simulate</p></li>
         </ol>
       </div>
     </section>
@@ -235,7 +234,8 @@
           </div>
           <div class="callout" style="margin-top:20px" data-reveal>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v4M12 17h.01"/></svg>
-            <p><strong>These scores are not real-world accuracy.</strong> The training table is synthetic GPS from notebook 01, seed 42, for this one corridor. The published interval covers <b class="mono" data-evidence="coverage-overall">…</b> of held-out delays (peak <span class="mono" data-evidence="coverage-peak">…</span>, off-peak <span class="mono" data-evidence="coverage-offpeak">…</span>). Retraining without <code class="mono">gps_speed_kmh</code> gives MAE <b class="mono" data-evidence="ablation-mae">…</b> min and R² <span class="mono" data-evidence="ablation-r2">…</span>. <a class="link link-inline" href="/model#caveats">All caveats</a></p>
+            <p><strong>These scores are not real-world accuracy.</strong> The training table is synthetic GPS from notebook 01, seed 42, for this one corridor. The published interval covers <b class="mono" data-evidence="coverage-overall">…</b> of held-out delays (peak <span class="mono" data-evidence="coverage-peak">…</span>, off-peak <span class="mono" data-evidence="coverage-offpeak">…</span>). Retraining without <code class="mono">gps_<wbr>speed_<wbr>kmh</code> gives MAE <b class="mono" data-evidence="ablation-mae">…</b> min and R² <span class="mono" data-evidence="ablation-r2">…</span>. <a class="link link-inline" href="/model#caveats">All caveats</a></p>
+            <p class="ev-retry" role="status"><span>Coverage and ablation figures couldn’t load from /api/evidence.</span><button type="button" data-ev-retry>Retry</button></p>
           </div>
         </div>
       </div>

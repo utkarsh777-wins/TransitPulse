@@ -18,10 +18,9 @@
   </script>
   <link rel="icon" href="assets/logo/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/logo/app-icon.svg">
-  <link rel="stylesheet" href="vendor/fonts/fonts.css">
-  <link rel="stylesheet" href="css/tokens.css">
-  <link rel="stylesheet" href="css/chrome.css">
-  <link rel="stylesheet" href="css/site.css">
+  <link rel="preload" href="vendor/fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="vendor/fonts/geist-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/site.bundle.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -69,9 +68,9 @@
           <ol class="rail">
             <li class="rail-step" style="--rd:0ms"><div class="node"><b>01</b></div><h3>GPS telemetry</h3><p>Position, speed and dwell for each trip and segment.</p><p class="mono-sub">4,800 pings · 30 days · generated</p></li>
             <li class="rail-step" style="--rd:120ms"><div class="node"><b>02</b></div><h3>Data-quality gates</h3><p>Four gates drop or repair bad telemetry before training.</p><p class="mono-sub">4,800 → 4,695 rows</p></li>
-            <li class="rail-step" style="--rd:240ms"><div class="node"><b>03</b></div><h3>Delay model</h3><p>A regressor predicts minutes of delay; a classifier cross-checks the status.</p><p class="mono-sub">RandomForest × 2 · 12 features</p></li>
-            <li class="rail-step" style="--rd:360ms"><div class="node"><b>04</b></div><h3>Calibrated window</h3><p>Quantile models give the 10th and 90th percentile; the window is centred on the point delay.</p><p class="mono-sub">GradientBoosting α 0.10 / 0.90</p></li>
-            <li class="rail-step is-out" style="--rd:480ms"><div class="node"><b>05</b></div><h3>Rider guidance</h3><p>Window, confidence, status, leave-by time and a plain-language reason.</p><p class="mono-sub">served by POST /api/simulate</p></li>
+            <li class="rail-step" style="--rd:240ms"><div class="node"><b>03</b></div><h3>Delay model</h3><p>A regressor predicts minutes of delay; a classifier cross-checks the status.</p><p class="mono-sub">Random<wbr>Forest × 2 · 12 features</p></li>
+            <li class="rail-step" style="--rd:360ms"><div class="node"><b>04</b></div><h3>Calibrated window</h3><p>Quantile models give the 10th and 90th percentile; the window is centred on the point delay.</p><p class="mono-sub">Gradient<wbr>Boosting α 0.10 / 0.90</p></li>
+            <li class="rail-step is-out" style="--rd:480ms"><div class="node"><b>05</b></div><h3>Rider guidance</h3><p>Window, confidence, status, leave-by time and a plain-language reason.</p><p class="mono-sub">served by POST /api/<wbr>simulate</p></li>
           </ol>
         </div>
       </div>
@@ -104,12 +103,12 @@
                 <div class="table-wrap" role="region" tabindex="0" aria-label="Telemetry fields, scrollable"><table class="table">
                   <thead><tr><th>Field</th><th>Example</th></tr></thead>
                   <tbody>
-                    <tr><td><code class="mono">segment_id</code></td><td class="mono">3 · Rama Mandi → Haveli</td></tr>
-                    <tr><td><code class="mono">gps_speed_kmh</code></td><td class="mono">20.0</td></tr>
-                    <tr><td><code class="mono">prev_stop_dwell_sec</code></td><td class="mono">85</td></tr>
-                    <tr><td><code class="mono">rolling_3trip_delay_min</code></td><td class="mono">6.5</td></tr>
-                    <tr><td><code class="mono">weather_severity</code></td><td class="mono">1 · light rain / fog</td></tr>
-                    <tr><td><code class="mono">hour_of_day</code></td><td class="mono">8 · peak</td></tr>
+                    <tr><td><code class="mono">segment_<wbr>id</code></td><td class="mono">3 · Rama Mandi → Haveli</td></tr>
+                    <tr><td><code class="mono">gps_<wbr>speed_<wbr>kmh</code></td><td class="mono">20.0</td></tr>
+                    <tr><td><code class="mono">prev_<wbr>stop_<wbr>dwell_<wbr>sec</code></td><td class="mono">85</td></tr>
+                    <tr><td><code class="mono">rolling_<wbr>3trip_<wbr>delay_<wbr>min</code></td><td class="mono">6.5</td></tr>
+                    <tr><td><code class="mono">weather_<wbr>severity</code></td><td class="mono">1 · light rain / fog</td></tr>
+                    <tr><td><code class="mono">hour_<wbr>of_<wbr>day</code></td><td class="mono">8 · peak</td></tr>
                   </tbody>
                 </table></div>
                 <p class="small muted" style="margin-top:12px">Example values from the README's sample request.</p>
@@ -144,11 +143,11 @@
               <div class="ex-visual">
                 <p class="card-label" style="margin-bottom:16px">Top features · importance</p>
                 <div class="fi">
-                  <div class="fi-row top"><code>rolling_3trip_delay_min</code><span class="track"><i style="width:100%"></i></span><span class="pct">60.3%</span></div>
-                  <div class="fi-row"><code>is_peak_hour</code><span class="track"><i style="width:38.7%"></i></span><span class="pct">23.4%</span></div>
-                  <div class="fi-row"><code>weather_severity</code><span class="track"><i style="width:10%"></i></span><span class="pct">6.1%</span></div>
-                  <div class="fi-row"><code>segment_id</code><span class="track"><i style="width:6.4%"></i></span><span class="pct">3.9%</span></div>
-                  <div class="fi-row"><code>gps_speed_kmh</code><span class="track"><i style="width:6.1%"></i></span><span class="pct">3.7%</span></div>
+                  <div class="fi-row top"><code>rolling_<wbr>3trip_<wbr>delay_<wbr>min</code><span class="track"><i style="width:100%"></i></span><span class="pct">60.3%</span></div>
+                  <div class="fi-row"><code>is_<wbr>peak_<wbr>hour</code><span class="track"><i style="width:38.7%"></i></span><span class="pct">23.4%</span></div>
+                  <div class="fi-row"><code>weather_<wbr>severity</code><span class="track"><i style="width:10%"></i></span><span class="pct">6.1%</span></div>
+                  <div class="fi-row"><code>segment_<wbr>id</code><span class="track"><i style="width:6.4%"></i></span><span class="pct">3.9%</span></div>
+                  <div class="fi-row"><code>gps_<wbr>speed_<wbr>kmh</code><span class="track"><i style="width:6.1%"></i></span><span class="pct">3.7%</span></div>
                 </div>
                 <a class="link" href="/model#importance">All 12 features <span class="arrow" aria-hidden="true">→</span></a>
               </div>
@@ -174,7 +173,7 @@ upper = <span class="k">round</span>(delay + half_spread, 1)</pre>
                 <h3>Rider guidance</h3>
                 <p>Status comes straight from the point delay. Riders get the window, a confidence figure based on window width, and advice that never says "board now" when confidence is low or the bus is late.</p>
                 <dl><dt>Leave by <span class="src-tag" title="Leave-by = window start − walk time (default 5 min). Returned as leave_by_min by POST /api/simulate.">from /api/simulate</span></dt><dd>window start − walk time</dd><dt>Low confidence</dt><dd>peak hours, wide window</dd></dl>
-                <p class="small muted" style="margin-top:12px">Leave-by is the window start minus walk time. <code class="mono">POST /api/simulate</code> accepts <code class="mono">walk_time_min</code> (default 5) and returns <code class="mono">leave_by_min</code> on every segment. The live demo has a walk-time slider.</p>
+                <p class="small muted" style="margin-top:12px">Leave-by is the window start minus walk time. <code class="mono">POST /api/simulate</code> accepts <code class="mono">walk_<wbr>time_<wbr>min</code> (default 5) and returns <code class="mono">leave_<wbr>by_<wbr>min</code> on every segment. The live demo has a walk-time slider.</p>
               </div>
               <div class="ex-visual">
                 <p class="card-label" style="margin-bottom:16px">Public status · minutes of delay</p>
@@ -221,7 +220,7 @@ upper = <span class="k">round</span>(delay + half_spread, 1)</pre>
             </svg>
           </figure>
         </div>
-        <p class="small muted" style="margin-top:16px">Widths are the model's mean interval widths from <code class="mono">model_metadata.json</code>. Positions on the axis are illustrative.</p>
+        <p class="small muted" style="margin-top:16px">Widths are the model's mean interval widths from <code class="mono">model_<wbr>metadata<wbr>.json</code>. Positions on the axis are illustrative.</p>
       </div>
     </section>
 

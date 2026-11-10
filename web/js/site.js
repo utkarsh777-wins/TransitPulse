@@ -51,7 +51,7 @@
       scrim.className = "site-scrim";
       scrim.setAttribute("aria-hidden", "true");
       header.appendChild(scrim);
-      var mq = matchMedia("(max-width: 899.98px)");
+      var mq = matchMedia("(max-width: 1099.98px)");
       var isOpen = function () { return header.classList.contains("is-open"); };
       var setInert = function (on) {
         Array.prototype.forEach.call(document.body.children, function (el) {
@@ -73,6 +73,17 @@
       scrim.addEventListener("click", function () { setMenu(false, true); });
       nav.addEventListener("click", function (e) { if (isOpen() && e.target.closest("a")) setMenu(false, false); });
       document.addEventListener("keydown", function (e) { if (e.key === "Escape" && isOpen()) { setMenu(false, true); } });
+      /* r4: Tab / Shift+Tab wrap inside the open menu layer (header + panel) instead of leaving for the browser chrome. */
+      document.addEventListener("keydown", function (e) {
+        if (e.key !== "Tab" || !isOpen()) return;
+        var items = Array.prototype.filter.call(header.querySelectorAll("a[href], button:not([disabled])"), function (el) {
+          return el.getClientRects().length && getComputedStyle(el).visibility !== "hidden" && el.tabIndex >= 0;
+        });
+        if (!items.length) return;
+        var first = items[0], last = items[items.length - 1], inside = header.contains(document.activeElement);
+        if (e.shiftKey && (document.activeElement === first || !inside)) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && (document.activeElement === last || !inside)) { e.preventDefault(); first.focus(); }
+      });
       var onMq = function () { if (!mq.matches && isOpen()) setMenu(false, false); };
       if (mq.addEventListener) mq.addEventListener("change", onMq); else mq.addListener(onMq);
       window.addEventListener("pageshow", function (e) { if (e.persisted && isOpen()) setMenu(false, false); }); /* back/forward cache */
@@ -111,16 +122,20 @@
 
   /* ---- Split-flap readouts: [data-flap="17:38–17:51"] ---- */
   /* Tiles are aria-hidden; the readable value is one .sr-only span (aria-label is not allowed on <p>/<span>). */
-  function tiles(el) { return el.querySelectorAll(":scope > .ch, :scope > .sep, :scope > .dash"); }
+  /* r4: tiles sit in .grp runs ("17:38", "–", "17:51") that never wrap inside, so a narrow column or
+     200 % text breaks the readout only at the dash, never inside a time. */
+  function tiles(el) { return el.querySelectorAll(":scope > .grp > .ch, :scope > .grp > .sep, :scope > .dash"); }
   function renderFlap(el, text, label) {
     el.textContent = "";
+    var grp = null;
     for (var i = 0; i < text.length; i++) {
       var c = text[i], s = document.createElement("span");
       s.setAttribute("aria-hidden", "true");
+      if (c === "–") { s.className = "dash"; s.textContent = "–"; el.appendChild(s); grp = null; continue; }
+      if (!grp) { grp = document.createElement("span"); grp.className = "grp"; grp.setAttribute("aria-hidden", "true"); el.appendChild(grp); }
       if (c === ":" || c === ".") { s.className = "sep"; s.textContent = c; }
-      else if (c === "–") { s.className = "dash"; s.textContent = "–"; }
       else { s.className = "ch"; var inner = document.createElement("span"); inner.textContent = c; s.appendChild(inner); }
-      el.appendChild(s);
+      grp.appendChild(s);
     }
     var sr = document.createElement("span");
     sr.className = "sr-only";
@@ -199,7 +214,7 @@
   /* Coverage and the GPS-speed ablation are filled from /api/evidence, never hard-coded. */
   var slots = document.querySelectorAll("[data-evidence]");
   var artifactBody = document.getElementById("artifact-body");
-  function evidenceText(value) { return value == null || value === "" ? "unavailable" : String(value); }
+  function evidenceText(value) { return value == null || value === "" || value === "unavailable" ? "—" : String(value); }
   function fmtPct(value) {
     var n = Number(value);
     return Number.isFinite(n) ? (n * 100).toFixed(1) + "%" : "unavailable";
@@ -249,21 +264,60 @@
           : size >= 1024 ? (size / 1024).toFixed(1) + " kB" : size + " B";
         var role = roles[item.name] || roles[String(item.file || "").replace(".joblib", "").replace(".json", "")] || item.name || "";
         var tr = document.createElement("tr");
-        tr.append(cell(String(item.file || ""), "mono"), cell(String(role)), cell(sizeText, "num"), cell(short, "sha", sha));
+        /* r4: the hash cell stays one line (shortened "8…6" form, full hash in the title) with a Copy button,
+           so phones get the whole SHA-256 without a 5-line cell. */
+        var shaCell = cell("", "sha", sha);
+        var shaText = document.createElement("span"); shaText.className = "sha-short"; shaText.textContent = short;
+        shaCell.appendChild(shaText);
+        if (sha) {
+          var copy = document.createElement("button");
+          copy.type = "button"; copy.className = "sha-copy"; copy.setAttribute("data-copy", sha);
+          copy.setAttribute("aria-label", "Copy SHA-256 of " + String(item.file || "artifact"));
+          copy.textContent = "Copy";
+          shaCell.appendChild(copy);
+        }
+        tr.append(cell(String(item.file || ""), "mono"), cell(String(role)), cell(sizeText, "num"), shaCell);
         return tr;
       }));
     }
     doc.dataset.evidence = "1";
   }
-  if (slots.length || artifactBody) {
+  /* r3: one loader, re-runnable from any [data-ev-retry] button. On failure the inline values become an
+     em dash (never the word "unavailable" inside a sentence) and one line under the block offers Retry. */
+  function loadEvidence() {
     doc.dataset.evidence = "pending"; /* site.css draws skeleton bars in the slots until this flips */
-    fetch("/api/evidence").then(function (response) {
+    fetch("/api/evidence", { cache: "no-store" }).then(function (response) {
       if (!response.ok) throw new Error(String(response.status));
       return response.json();
     }).then(applyEvidence).catch(function () {
-      slots.forEach(function (el) { el.textContent = "unavailable"; el.title = "/api/evidence did not answer"; });
-      if (artifactBody) artifactBody.innerHTML = '<tr><td colspan="4">The artifact inventory could not be loaded from /api/evidence. <a class="link link-inline" href="">Retry</a></td></tr>';
+      slots.forEach(function (el) { el.textContent = "—"; el.title = "Not loaded: /api/evidence did not answer"; });
+      if (artifactBody) {
+        var tr = document.createElement("tr"), td = document.createElement("td");
+        td.colSpan = 4; td.textContent = "The artifact inventory could not be loaded from /api/evidence. ";
+        var btn = document.createElement("button"); btn.type = "button"; btn.className = "link link-inline"; btn.setAttribute("data-ev-retry", ""); btn.textContent = "Retry";
+        td.appendChild(btn); tr.appendChild(td); artifactBody.replaceChildren(tr);
+      }
       doc.dataset.evidence = "error";
+    });
+  }
+  /* r4: copy a full hash; the button says "Copied" for 1.6 s (role=status line announces it). */
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest && e.target.closest("[data-copy]");
+    if (!btn) return;
+    var text = btn.getAttribute("data-copy");
+    var done = function (ok) {
+      btn.textContent = ok ? "Copied" : "Select";
+      if (!ok) { var r = document.createRange(); r.selectNodeContents(btn.previousSibling); var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); btn.previousSibling.textContent = text; }
+      setTimeout(function () { btn.textContent = "Copy"; }, 1600);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
+    else done(false);
+  });
+  if (slots.length || artifactBody) {
+    loadEvidence();
+    document.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-ev-retry]");
+      if (b) { e.preventDefault(); loadEvidence(); }
     });
   }
 
