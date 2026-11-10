@@ -65,14 +65,13 @@
     ["rolling_lag", "peak_hour", "weather", "dwell"].forEach(function (key) {
       var d = byKey[key];
       if (!d) return;
-      var minutes = Number(d.minutes);
-      var shown = Number(minutes.toFixed(1));
-      if (key === "dwell" && !(shown > 0)) return;
+      var text = driverBadgeText(d.minutes);
+      if (!text) return;
       var li = document.createElement("li");
       var name = document.createElement("span");
       name.textContent = NAMES[key] || d.label;
       var mins = document.createElement("b");
-      mins.textContent = (shown > 0 ? "+" : "") + shown.toFixed(1) + " min";
+      mins.textContent = text;
       li.append(name, mins);
       list.appendChild(li);
     });

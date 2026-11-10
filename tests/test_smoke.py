@@ -465,3 +465,54 @@ def test_teacher_prompt_gap_copy() -> None:
     rider = (ROOT / "web" / "js" / "rider-home.js").read_text(encoding="utf-8")
     assert "ops-band" in rider
     assert "Leave in " not in rider
+
+
+def test_review_fixes_readme_badges_and_about() -> None:
+    """README matches the committed lag ablation, zero badges stay hidden, about drops the live claim."""
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "No ablation drops `rolling_3trip_delay_min`" not in readme
+    assert "That check is not measured" not in readme
+    assert "the evaluator page says so" not in readme
+    assert "the GPS-speed ablation, and artifact hashes" not in readme
+    assert "GPS-speed ablation and interval coverage" not in readme
+    assert "MAE 0.738 min and R² 0.926" in readme
+    assert "MAE 0.819 min and R² 0.903" in readme
+    assert "n_jobs` 1" in readme
+    assert "upstream-lag ablations" in readme
+    about = (ROOT / "web" / "about.html").read_text(encoding="utf-8")
+    assert "live corridor dashboard" not in about
+    assert "FastAPI backend and corridor rider view" in about
+    assert "Read live pings from AIS-140" in about
+    assert "Re-measure window coverage on live trips" in about
+    home = (ROOT / "web" / "js" / "rider-home.js").read_text(encoding="utf-8")
+    demo = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+    assert "driverBadgeText(" in home
+    assert "driverBadgeText(" in demo
+    script = r"""
+const api = require("./web/js/arrival.js");
+const cases = [
+  [0, ""],
+  [0.0, ""],
+  [0.04, ""],
+  [-0.04, ""],
+  [0.14, "+0.1 min"],
+  [2.47, "+2.5 min"],
+  [0.61, "+0.6 min"],
+  [-0.16, "-0.2 min"],
+];
+for (const [minutes, expected] of cases) {
+  const got = api.driverBadgeText(minutes);
+  if (got !== expected) {
+    console.error(JSON.stringify({ minutes, got, expected }));
+    process.exit(2);
+  }
+}
+"""
+    proc = subprocess.run(
+        ["node", "-e", script],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr + proc.stdout

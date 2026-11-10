@@ -423,13 +423,13 @@ function renderDriverBadges(segment) {
   ["rolling_lag", "peak_hour", "weather", "dwell"].forEach((key) => {
     const driver = byKey[key];
     if (!driver) return;
-    const shown = Number(Number(driver.minutes).toFixed(1));
-    if (key === "dwell" && !(shown > 0)) return;
+    const text = driverBadgeText(driver.minutes);
+    if (!text) return;
     const li = document.createElement("li");
     const name = document.createElement("span");
     name.textContent = DRIVER_NAMES[key] || driver.label;
     const mins = document.createElement("b");
-    mins.textContent = `${shown > 0 ? "+" : ""}${shown.toFixed(1)} min`;
+    mins.textContent = text;
     li.append(name, mins);
     list.appendChild(li);
   });
