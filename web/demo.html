@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#F3F1EC" id="meta-theme-color">
-  <title>Live demo · TransitPulse</title>
-  <meta name="description" content="Live NH-44 corridor demo: arrival windows, confidence and leave-by times for a bus from Jalandhar to Phagwara. Runs on a labelled in-browser stand-in when the model server is unreachable.">
+  <title>NH-44 rider view · TransitPulse</title>
+  <meta name="description" content="Selected stop, lateness, and when to leave for bus PB08-BUS-101 on NH-44. A labelled stand-in is used only if the model server is unreachable.">
   <script>
     /* Set the theme before first paint: ?theme= (screenshots) > saved choice > OS preference. */
     (function () {
@@ -63,24 +63,24 @@
   <p class="standin-banner" id="standin-banner" data-mode="pending" aria-live="polite">
     <span class="sb-standin"><strong>Stand-in fallback.</strong> The API is unreachable, so these numbers are an in-browser heuristic, not the trained model.</span>
     <span class="sb-alt sb-pending"><strong>Connecting to the model API…</strong> If it can't be reached, an in-browser heuristic will stand in for the trained model.</span>
-    <span class="sb-alt sb-live"><strong>Live model.</strong> Predictions come from the trained model via /api/simulate.</span>
+    <span class="sb-alt sb-live"><strong>Scenario model.</strong> Not a live GPS feed. Numbers come from /api/simulate for this corridor only.</span>
     <span class="sb-alt sb-error"><strong>Corridor data unavailable.</strong> See the message below.</span>
   </p>
   <div class="topbar app-bar">
     <div class="topbar-inner">
       <div class="brand app-title">
         <span class="brand-desc">
-          <h1 class="brand-product">Live demo · NH-44</h1>
+          <h1 class="brand-product">Rider view · NH-44</h1>
           <span class="brand-route">Jalandhar → Phagwara · bus PB08-BUS-101</span>
         </span>
       </div>
 
       <nav class="view-tabs" aria-label="Dashboard views" role="tablist">
         <button class="view-tab is-active" data-view="live" role="tab" aria-selected="true" aria-controls="view-live" id="tab-live" type="button">
-          <span class="tab-long">Live Rider &amp; Fleet Simulator</span><span class="tab-short">Live simulator</span>
+          <span class="tab-long">Rider view</span><span class="tab-short">Rider</span>
         </button>
         <button class="view-tab" data-view="evaluator" role="tab" aria-selected="false" aria-controls="view-evaluator" id="tab-evaluator" type="button">
-          <span class="tab-long">Evaluator Diagnostics</span><span class="tab-short">Diagnostics</span>
+          <span class="tab-long">Evaluator evidence</span><span class="tab-short">Evaluator</span>
         </button>
       </nav>
 
@@ -128,9 +128,9 @@
           <p class="kpi-foot" id="stat-delay-foot">Awaiting inference</p>
         </article>
         <article class="kpi">
-          <h2 class="label">Fleet confidence</h2>
-          <p class="kpi-value"><span class="num" id="stat-confidence">--</span><span class="unit">%</span></p>
-          <p class="kpi-foot" id="stat-confidence-foot">80% quantile envelope</p>
+          <h2 class="label">Walk to the stop</h2>
+          <p class="kpi-value"><span class="num" id="stat-confidence">--</span><span class="unit">min</span></p>
+          <p class="kpi-foot" id="stat-confidence-foot">min used in leave-by</p>
         </article>
         <article class="kpi kpi-eta">
           <h2 class="label">Next stop ETA</h2>
@@ -140,7 +140,7 @@
         <article class="kpi">
           <h2 class="label">Live status</h2>
           <p class="kpi-value kpi-status"><span class="status-dot" id="stat-status-dot" aria-hidden="true"></span><span id="stat-status">--</span></p>
-          <p class="kpi-foot" id="stat-status-foot">Classifier output</p>
+          <p class="kpi-foot" id="stat-status-foot">From the delay on this trip</p>
         </article>
         <p class="stale-note src-tag" id="stale-note" role="status" hidden></p>
       </div>
@@ -148,7 +148,7 @@
       <section class="card map-card area-map" aria-labelledby="map-title">
         <header class="card-head">
           <div class="card-title">
-            <span class="label">Live fleet telemetry</span>
+            <span class="label">Corridor map</span>
             <h2 id="map-title">NH-44 corridor</h2>
           </div>
           <div class="card-tools">
@@ -194,7 +194,7 @@
         <section class="card eta-card" id="eta-card" aria-labelledby="eta-title">
           <div class="notice" id="peak-alert" hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 3 20h18L12 4Z"/><path d="M12 10v4M12 17h.01"/></svg>
-            <p><strong>Peak traffic volatility.</strong> <span>Prediction confidence is lower, so the ETA is shown as an 80% window.</span></p>
+            <p><strong>Peak hour.</strong> <span>The likely arrival is wider. It is not an 80% or 85% promise.</span></p>
           </div>
           <header class="card-head">
             <div class="card-title">
@@ -217,7 +217,7 @@
 
           <div class="eta-window" id="eta-range" hidden>
             <div class="eta-window-top">
-              <span class="label">80% arrival window</span>
+              <span class="label" title="This stop's 10th–90th delay band, shifted by earlier stops' estimated delays. Not a calibrated cumulative interval.">Likely arrival</span>
               <strong class="mono" id="eta-range-value">--</strong>
             </div>
             <div class="window-track" aria-hidden="true">
@@ -234,7 +234,7 @@
 
           <dl class="facts">
             <div><dt>Segment</dt><dd id="eta-segment-name">--</dd></div>
-            <div><dt>Classifier</dt><dd id="eta-classifier">--</dd></div>
+            <div><dt>Status</dt><dd id="eta-classifier">--</dd></div>
             <div><dt>Delay window</dt><dd class="mono" id="eta-window">--</dd></div>
             <div><dt>Leave by</dt><dd class="mono" id="eta-leave" title="Window start minus walk time">--</dd></div>
           </dl>
@@ -243,23 +243,23 @@
         <section class="card xai-card" aria-labelledby="xai-title">
           <header class="card-head">
             <div class="card-title">
-              <span class="label">Explainable AI</span>
-              <h2 id="xai-title">Why this delay?</h2>
+              <span class="label">What is adding time</span>
+              <h2 id="xai-title">Why this stop is late</h2>
             </div>
             <span class="tag mono" id="xai-segment">SEG 01</span>
           </header>
           <div class="xai-row xai-axis" aria-hidden="true"><span></span><span class="xai-axis-labels"><span class="nw">−&nbsp;Saves</span><span class="nw">Adds&nbsp;+</span></span><span></span></div>
           <div class="xai-bars" id="xai-bars" role="list" aria-label="Local feature attribution in minutes"></div>
           <div class="xai-sum" id="xai-sum"></div>
-          <p class="footnote">Neutral baseline <strong class="mono" id="xai-baseline">--</strong>. Local leave-one-out attribution, in minutes: each bar is the change in predicted delay when that factor is added back.</p>
+          <p class="footnote">Compared with a neutral trip <strong class="mono" id="xai-baseline">--</strong>. Each bar is extra minutes from that one change. Not a proof that nothing else leaks into the model.</p>
         </section>
       </div>
 
       <section class="card segments-card area-segments" aria-labelledby="seg-title">
         <header class="card-head">
           <div class="card-title">
-            <span class="label">Classifier segment grid</span>
-            <h2 id="seg-title">Live delay classification</h2>
+            <span class="label">Stops along the trip</span>
+            <h2 id="seg-title">Each segment</h2>
           </div>
           <ul class="seg-summary" aria-label="Segments by status">
             <li><i class="swatch ontime"></i><b class="mono" id="count-on-time">0</b> On time</li>
@@ -271,12 +271,12 @@
           <div class="seg-row seg-head" aria-hidden="true">
             <span>Seg</span>
             <span>Route</span>
-            <span class="r">Sched</span>
+            <span class="r" title="Scheduled arrival from the trip start">Scheduled</span>
             <span class="r">ETA</span>
             <span class="r">Delay</span>
-            <span>80% window</span>
+            <span title="This stop's 10th–90th delay band, shifted by earlier stops' estimated delays. Not a calibrated cumulative interval.">Likely</span>
             <span>Status</span>
-            <span>Confidence</span>
+            <span>Leave by</span>
           </div>
           <div id="segment-list" role="group" aria-label="Segments: select one to inspect it"></div>
         </div>
@@ -306,7 +306,7 @@
             <div class="segmented presets" role="group" aria-labelledby="preset-label">
               <button class="seg-btn preset-btn" data-preset="midday" type="button">Midday Clear</button>
               <button class="seg-btn preset-btn" data-preset="rush" type="button">Morning Rush + Rain</button>
-              <button class="seg-btn preset-btn" data-preset="evening" type="button">Evening Gridlock</button>
+              <button class="seg-btn preset-btn" data-preset="evening" type="button">Severe congestion</button>
             </div>
           </div>
 
@@ -344,15 +344,18 @@
 
             <div class="field">
               <label class="field-label" for="speed-slider">Corridor GPS speed <output class="mono"><span id="speed-value">30</span> km/h</output></label>
-              <div class="range"><input type="range" id="speed-slider" min="10" max="60" step="1" value="30"></div>
-              <div class="scale"><span>10</span><span>60 km/h</span></div>
+              <div class="range"><input type="range" id="speed-slider" min="2" max="95" step="1" value="34"></div>
+              <div class="scale"><span>2</span><span>95 km/h</span></div>
             </div>
 
             <div class="field">
               <label class="field-label" for="walk-slider">Walk to the stop <output class="mono"><span id="walk-value">5</span> min</output></label>
-              <div class="range"><input type="range" id="walk-slider" min="0" max="20" step="1" value="5"></div>
-              <div class="scale"><span>0</span><span>Leave-by uses this walk</span><span>20 min</span></div>
+              <div class="range"><input type="range" id="walk-slider" min="0" max="30" step="1" value="5"></div>
+              <div class="scale"><span>0</span><span>Leave-by uses this walk</span><span>30 min</span></div>
             </div>
+          </div>
+          <div class="field">
+            <button class="btn btn-secondary" id="export-scenario" type="button">Download this scenario (CSV)</button>
           </div>
         </div>
       </section>
@@ -363,8 +366,8 @@
       <div class="eval-hero">
         <div class="eval-intro">
           <span class="label">Rubric audit view</span>
-          <h2>Evaluator diagnostics &amp; validation proof</h2>
-          <p>Frozen ML artifacts, data-quality gates, time-respecting validation and uncertainty calibration for the NH-44 transit corridor.</p>
+          <h2>Evaluator evidence</h2>
+          <p>Counts and scores below come from the committed model files. If a check was not run, it says not measured.</p>
         </div>
         <div class="verdict" id="verification-summary">
           <span class="verdict-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span>
@@ -374,6 +377,20 @@
           </div>
         </div>
       </div>
+
+      <section class="card" id="limits" aria-labelledby="limits-title">
+        <h2 id="limits-title">Limits of this evidence</h2>
+        <ul>
+          <li>Removing GPS speed and retraining is measured. The MAE and R² are filled from <code>/api/evidence</code>.</li>
+          <li>Upstream lag (<code>rolling_3trip_delay_min</code>) is the largest feature and can carry information about the delay itself. An ablation that removes it is <strong>not measured</strong>. This page does not claim zero leakage.</li>
+          <li>Likely arrival is this stop's 10th–90th delay band, shifted by earlier stops' estimated delays. It is not a calibrated cumulative interval, and it is not an 80% or 85% guarantee. Observed coverage on synthetic days 25–30 is a separate number.</li>
+        </ul>
+        <p id="coverage-line">Observed coverage: loading from the committed metadata.</p>
+        <div class="demo-error-actions">
+          <button class="btn btn-secondary" id="export-evidence" type="button">Download evidence (CSV)</button>
+          <button class="btn btn-secondary" id="print-brief" type="button">Print this brief</button>
+        </div>
+      </section>
 
       <div class="metric-grid" id="metric-grid">
         <article class="metric"><h3 class="label">Model MAE</h3><p class="metric-value">--</p><p class="kpi-foot">Awaiting diagnostics</p></article>
@@ -395,8 +412,8 @@
             <span class="tag mono">Days 1–24 → 25–30</span>
           </header>
           <div class="split">
-            <div class="split-bar" aria-hidden="true"><span class="split-train">Train · 80%</span><span class="split-test">Test · 20%</span></div>
-            <div class="split-labels"><span>Days 1–24 · 3,756 segments</span><span>Days 25–30 · 939 segments</span></div>
+            <div class="split-bar" aria-hidden="true"><span class="split-train">Days 1–24</span><span class="split-test">Days 25–30</span></div>
+            <div class="split-labels"><span id="split-train">Days 1–24 · count not measured</span><span id="split-test">Days 25–30 · count not measured</span></div>
           </div>
           <ul class="checks" id="proof-list">
             <li>No future leakage across the split boundary</li>
@@ -483,6 +500,7 @@
   <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+  <script defer src="js/arrival.js"></script>
   <script defer src="standin.js"></script>
   <script defer src="app.js"></script>
   <script defer src="js/site.js"></script>

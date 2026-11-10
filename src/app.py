@@ -491,11 +491,6 @@ def segment_inference(models: dict[str, Any], request: SimulationRequest) -> dic
             "is_peak_hour": peak,
             "window": "08:00-10:00 / 17:00-19:00",
             "banner": "PEAK TRAFFIC VOLATILITY - LOWER PREDICTION CONFIDENCE" if peak else None,
-            "message": (
-                "Peak demand is inflating the 80% prediction interval. Rider guidance now uses the quantile range."
-                if peak
-                else "Off-peak conditions are stable. Point ETA confidence is high."
-            ),
         },
         "segments": segments_payload,
         "stops": stops_payload,
