@@ -63,7 +63,7 @@
   <p class="standin-banner" id="standin-banner" data-mode="pending" aria-live="polite">
     <span class="sb-standin"><strong>Stand-in fallback.</strong> The API is unreachable, so these numbers are an in-browser heuristic, not the trained model.</span>
     <span class="sb-alt sb-pending"><strong>Connecting to the model API…</strong> If it can't be reached, an in-browser heuristic will stand in for the trained model.</span>
-    <span class="sb-alt sb-live"><strong>Scenario model.</strong> Not a live GPS feed. Numbers come from /api/simulate for this corridor only.</span>
+    <span class="sb-alt sb-live"><strong>Scenario model.</strong> Not a live GPS feed.</span>
     <span class="sb-alt sb-error"><strong>Corridor data unavailable.</strong> See the message below.</span>
   </p>
   <div class="topbar app-bar">
@@ -85,10 +85,6 @@
       </nav>
 
       <div class="topbar-meta">
-        <div class="sync-pill" id="sync-pill" data-state="busy" role="status">
-          <span class="sync-dot" aria-hidden="true"></span>
-          <span id="sync-label">Connecting</span>
-        </div>
         <div class="clock" role="group" aria-label="Local time, IST">
           <span class="clock-label">IST</span>
           <time id="live-clock">--:--:--</time>
@@ -112,7 +108,7 @@
     <!-- r3: first-paint skeleton. Pure CSS: shown from the first frame while html[data-demo] is
          loading|skeleton (fades in after 300 ms so fast loads never flash), removed when app.js sets ready. -->
     <div class="demo-skeleton" aria-hidden="true">
-      <div class="sk-kpis"><i></i><i></i><i></i><i></i></div>
+      <div class="sk-kpis"><i></i><i></i><i></i></div>
       <div class="sk-split">
         <div class="sk-map"><svg viewBox="0 0 600 300" preserveAspectRatio="xMidYMid meet"><polyline points="116.5,40 172.9,55.9 209.9,73.9 293,144.7 348.2,184.6 483.5,260"/><g><circle cx="116.5" cy="40" r="6"/><circle cx="172.9" cy="55.9" r="6"/><circle cx="209.9" cy="73.9" r="6"/><circle cx="293" cy="144.7" r="6"/><circle cx="348.2" cy="184.6" r="6"/><circle cx="483.5" cy="260" r="6"/></g></svg></div>
         <div class="sk-card"><b></b><b class="w60"></b><b class="big"></b><b class="w80"></b><b class="w40"></b></div>
@@ -137,11 +133,6 @@
           <p class="kpi-value"><span class="flap flap-sm" id="stat-eta" aria-hidden="true">--</span><span class="sr-only" id="stat-eta-sr">not loaded</span><span class="unit">min</span></p>
           <p class="kpi-foot" id="stat-eta-foot">Next stop</p>
         </article>
-        <article class="kpi">
-          <h2 class="label">Live status</h2>
-          <p class="kpi-value kpi-status"><span class="status-dot" id="stat-status-dot" aria-hidden="true"></span><span id="stat-status">--</span></p>
-          <p class="kpi-foot" id="stat-status-foot">From the delay on this trip</p>
-        </article>
         <p class="stale-note src-tag" id="stale-note" role="status" hidden></p>
       </div>
 
@@ -163,7 +154,7 @@
           </div>
         </header>
         <div class="map-wrap" id="map-wrap">
-          <div id="map" role="region" aria-label="Map of the NH-44 corridor from Jalandhar to Phagwara with live bus position"></div>
+          <div id="map" role="region" aria-label="Map of the NH-44 corridor from Jalandhar to Phagwara"></div>
           <!-- Skeleton: the corridor drawn from the stand-in geometry, shown until the map and first result arrive -->
           <svg class="map-skeleton" viewBox="0 0 600 300" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
             <polyline points="116.5,40 172.9,55.9 209.9,73.9 293,144.7 348.2,184.6 483.5,260"/>
@@ -179,10 +170,8 @@
               <span><strong class="mono">PB08-BUS-101</strong><span class="tel-route" id="hud-route">Jalandhar BS → Phagwara BS</span></span>
             </dd>
           </div>
-          <div><dt>State</dt><dd><span class="state-chip" id="hud-state">Tracking</span></dd></div>
           <div><dt>Heading to</dt><dd id="hud-next-stop">PAP Chowk</dd></div>
           <div><dt>Speed</dt><dd class="mono"><span id="hud-speed">--</span> km/h</dd></div>
-          <div class="tel-coords"><dt>Position</dt><dd class="mono"><span id="hud-lat">31.31560</span>, <span id="hud-lon">75.59200</span></dd></div>
           <div class="tel-progress">
             <dt>Progress <span class="mono" id="hud-progress-value">0%</span></dt>
             <dd><span class="track" aria-hidden="true"><i id="hud-progress-bar"></i></span></dd>
@@ -194,7 +183,7 @@
         <section class="card eta-card" id="eta-card" aria-labelledby="eta-title">
           <div class="notice" id="peak-alert" hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 3 20h18L12 4Z"/><path d="M12 10v4M12 17h.01"/></svg>
-            <p><strong>Peak hour.</strong> <span>The likely arrival is wider. It is not an 80% or 85% promise.</span></p>
+            <p><strong>Peak hour.</strong> <span>The likely arrival is wider.</span></p>
           </div>
           <header class="card-head">
             <div class="card-title">
@@ -217,7 +206,7 @@
 
           <div class="eta-window" id="eta-range" hidden>
             <div class="eta-window-top">
-              <span class="label" title="This stop's 10th–90th delay band, shifted by earlier stops' estimated delays. Not a calibrated cumulative interval.">Likely arrival</span>
+              <span class="label">Likely arrival</span>
               <strong class="mono" id="eta-range-value">--</strong>
             </div>
             <div class="window-track" aria-hidden="true">
@@ -229,29 +218,23 @@
 
           <div class="advice">
             <span class="label">Rider recommendation</span>
-            <p id="recommendation">Select a segment to inspect live rider guidance.</p>
+            <p id="recommendation">Select a stop.</p>
           </div>
 
           <dl class="facts">
             <div><dt>Segment</dt><dd id="eta-segment-name">--</dd></div>
             <div><dt>Status</dt><dd id="eta-classifier">--</dd></div>
-            <div><dt>Delay window</dt><dd class="mono" id="eta-window">--</dd></div>
-            <div><dt>Leave by</dt><dd class="mono" id="eta-leave" title="Window start minus walk time">--</dd></div>
           </dl>
         </section>
 
         <section class="card xai-card" aria-labelledby="xai-title">
           <header class="card-head">
             <div class="card-title">
-              <span class="label">What is adding time</span>
-              <h2 id="xai-title">Why this stop is late</h2>
+              <h2 id="xai-title">What is adding time</h2>
             </div>
             <span class="tag mono" id="xai-segment">SEG 01</span>
           </header>
-          <div class="xai-row xai-axis" aria-hidden="true"><span></span><span class="xai-axis-labels"><span class="nw">−&nbsp;Saves</span><span class="nw">Adds&nbsp;+</span></span><span></span></div>
-          <div class="xai-bars" id="xai-bars" role="list" aria-label="Local feature attribution in minutes"></div>
-          <div class="xai-sum" id="xai-sum"></div>
-          <p class="footnote">Compared with a neutral trip <strong class="mono" id="xai-baseline">--</strong>. Each bar is extra minutes from that one change. Not a proof that nothing else leaks into the model.</p>
+          <div class="xai-bars" id="xai-bars" role="list" aria-label="Minutes added at this stop"></div>
         </section>
       </div>
 
@@ -274,9 +257,8 @@
             <span class="r" title="Scheduled arrival from the trip start">Scheduled</span>
             <span class="r">ETA</span>
             <span class="r">Delay</span>
-            <span title="This stop's 10th–90th delay band, shifted by earlier stops' estimated delays. Not a calibrated cumulative interval.">Likely</span>
+            <span>Likely</span>
             <span>Status</span>
-            <span>Leave by</span>
           </div>
           <div id="segment-list" role="group" aria-label="Segments: select one to inspect it"></div>
         </div>
@@ -304,8 +286,8 @@
           <div class="field">
             <span class="field-label" id="preset-label">Preset scenario</span>
             <div class="segmented presets" role="group" aria-labelledby="preset-label">
-              <button class="seg-btn preset-btn" data-preset="midday" type="button">Midday Clear</button>
-              <button class="seg-btn preset-btn" data-preset="rush" type="button">Morning Rush + Rain</button>
+              <button class="seg-btn preset-btn" data-preset="midday" type="button">Midday clear</button>
+              <button class="seg-btn preset-btn" data-preset="rush" type="button">Morning rush and rain</button>
               <button class="seg-btn preset-btn" data-preset="evening" type="button">Severe congestion</button>
             </div>
           </div>
@@ -343,7 +325,7 @@
             </div>
 
             <div class="field">
-              <label class="field-label" for="speed-slider">Corridor GPS speed <output class="mono"><span id="speed-value">30</span> km/h</output></label>
+              <label class="field-label" for="speed-slider">Corridor speed <output class="mono"><span id="speed-value">30</span> km/h</output></label>
               <div class="range"><input type="range" id="speed-slider" min="2" max="95" step="1" value="34"></div>
               <div class="scale"><span>2</span><span>95 km/h</span></div>
             </div>
@@ -381,6 +363,8 @@
       <section class="card" id="limits" aria-labelledby="limits-title">
         <h2 id="limits-title">Limits of this evidence</h2>
         <ul>
+          <li>Rider numbers come from <code>POST /api/simulate</code> for this corridor only.</li>
+          <li>Compared with a neutral trip <strong class="mono" id="xai-baseline">--</strong>. Each bar is extra minutes from that one change. Not a proof that nothing else leaks into the model.</li>
           <li>Removing GPS speed and retraining is measured. The MAE and R² are filled from <code>/api/evidence</code>.</li>
           <li>Upstream lag (<code>rolling_3trip_delay_min</code>) is the largest feature and can carry information about the delay itself. An ablation that removes it is <strong>not measured</strong>. This page does not claim zero leakage.</li>
           <li>Likely arrival is this stop's 10th–90th delay band, shifted by earlier stops' estimated delays. It is not a calibrated cumulative interval, and it is not an 80% or 85% guarantee. Observed coverage on synthetic days 25–30 is a separate number.</li>
@@ -491,7 +475,7 @@
         </ul></div>
       </div>
       <div class="site-footer-bottom">
-        <span class="foot-mode" id="footer-mode">Live model · FastAPI + scikit-learn</span>
+        <span class="foot-mode" id="footer-mode">Scenario model · not a live GPS feed</span>
         <span>NH-44 · Jalandhar → Phagwara · IST</span>
       </div>
     </div>

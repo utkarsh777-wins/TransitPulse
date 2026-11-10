@@ -271,7 +271,7 @@ p { max-width: 68ch; }
 .flap-lg { font-size: var(--t-hero); gap: 4px; }
 
 /* KPI tiles */
-.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap); }
+.kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap); }
 .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow); padding: var(--s-4) var(--card-pad); min-width: 0; display: grid; gap: var(--s-2); align-content: start; }
 .kpi .label { font-weight: 500; }
 .kpi-value { display: flex; align-items: baseline; gap: 8px; min-height: 1.15em; font-size: var(--t-kpi); line-height: 1.05; letter-spacing: -0.02em; }
@@ -384,7 +384,7 @@ p { max-width: 68ch; }
 .seg-table { display: grid; }
 .seg-row {
   display: grid;
-  grid-template-columns: 4.2em minmax(11em, 1.7fr) 4em 4em 4.4em minmax(7.5em, 1fr) 8.6em minmax(7em, .9fr);
+  grid-template-columns: 4.2em minmax(11em, 1.7fr) 4em 4em 4.4em minmax(7.5em, 1fr) 8.6em;
   gap: var(--s-3); align-items: center;
   padding: 12px var(--s-3);
   font-size: var(--t-sm);
@@ -411,14 +411,13 @@ p { max-width: 68ch; }
 /* compact rows when the card is narrow */
 @container (max-width: 760px) {
   .seg-head { display: none; }
-  .seg-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name status" "nums nums" "conf conf"; gap: var(--s-2) var(--s-3); padding: var(--s-3); }
+  .seg-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name status" "nums nums"; gap: var(--s-2) var(--s-3); padding: var(--s-3); }
   .seg-id { display: none; }
   .seg-name { grid-area: name; }
   .seg-name strong::before { content: attr(data-id) "  "; font-family: var(--font-mono); color: var(--fg-2); font-weight: 500; white-space: pre; }
   .seg-badge { grid-area: status; justify-self: end; }
   .seg-nums { grid-area: nums; display: flex !important; flex-wrap: wrap; gap: var(--s-1) var(--s-4); }
   .seg-row > .seg-num, .seg-row > .seg-window { display: none; }
-  .seg-conf { grid-area: conf; }
 }
 .seg-nums { display: none; font-size: var(--t-sm); color: var(--fg-2); }
 .seg-nums b { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--fg); font-weight: 500; }

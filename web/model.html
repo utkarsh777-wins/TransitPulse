@@ -63,13 +63,13 @@
     <section class="section tight" style="padding-top:0">
       <div class="wrap">
         <div class="kpi-grid" data-reveal>
-          <div class="kpi-cell"><p class="k">MAE</p><p class="v">0.627<small>min</small></p><p>Held-out days 25–30</p></div>
-          <div class="kpi-cell"><p class="k">RMSE</p><p class="v">0.914<small>min</small></p><p>Held-out days 25–30</p></div>
-          <div class="kpi-cell"><p class="k">R²</p><p class="v">0.945</p><p>Delay regressor</p></div>
-          <div class="kpi-cell"><p class="k">Baseline MAE</p><p class="v">3.498<small>min</small></p><p>Historical segment average</p></div>
-          <div class="kpi-cell"><p class="k">Error reduction</p><p class="v">82.07<small>%</small></p><p>vs the baseline</p></div>
+          <div class="kpi-cell"><p class="k">MAE</p><p class="v">0.6<small>min</small></p><p>Held-out days 25–30</p></div>
+          <div class="kpi-cell"><p class="k">RMSE</p><p class="v">0.9<small>min</small></p><p>Held-out days 25–30</p></div>
+          <div class="kpi-cell"><p class="k">R²</p><p class="v">0.95</p><p>Delay regressor</p></div>
+          <div class="kpi-cell"><p class="k">Baseline MAE</p><p class="v">3.5<small>min</small></p><p>Historical segment average</p></div>
+          <div class="kpi-cell"><p class="k">Error reduction</p><p class="v">82<small>%</small></p><p>vs the baseline</p></div>
           <div class="kpi-cell"><p class="k">Classifier accuracy</p><p class="v">89.1<small>%</small></p><p>Macro F1 89.3% · 945 test rows</p></div>
-          <div class="kpi-cell"><p class="k">Mean CV MAE</p><p class="v">0.711<small>min</small></p><p>5-fold TimeSeriesSplit, days 1–24</p></div>
+          <div class="kpi-cell"><p class="k">Mean CV MAE</p><p class="v">0.7<small>min</small></p><p>5-fold TimeSeriesSplit, days 1–24</p></div>
           <div class="kpi-cell"><p class="k">Window coverage</p><p class="v"><span data-evidence="coverage-overall">…</span></p><p>Held-out days 25–30 inside the published interval. Peak <span class="mono" data-evidence="coverage-peak">…</span>, off-peak <span class="mono" data-evidence="coverage-offpeak">…</span>.</p><span class="src">from /api/evidence</span></div>
         </div>
         <p class="ev-retry" role="status"><span>Coverage and ablation figures couldn’t load from /api/evidence.</span><button type="button" data-ev-retry>Retry</button></p>
@@ -81,22 +81,22 @@
         <div class="sec-head">
           <span class="eyebrow">Feature importance</span>
           <h2 class="h-1" data-reveal>Mostly: is the bus ahead already late?</h2>
-          <p class="lead" data-reveal style="--rd:80ms">The lag of the last three trips carries 60% of the regressor's importance, and peak hour adds 23%. That makes sense for a corridor, but it is also the feature to watch for leakage.</p>
+          <p class="lead" data-reveal style="--rd:80ms">The lag of the last three trips carries 60.3% of the regressor's importance, and peak hour adds 23.4%. That makes sense for a corridor, but it is also the feature to watch for leakage.</p>
         </div>
         <div class="card">
           <div class="fi">
-            <div class="fi-row top" style="--rd:0ms"><code>rolling_<wbr>3trip_<wbr>delay_<wbr>min</code><span class="track"><i style="width:100%"></i></span><span class="pct">60.35%</span></div>
-            <div class="fi-row" style="--rd:40ms"><code>is_<wbr>peak_<wbr>hour</code><span class="track"><i style="width:38.7%"></i></span><span class="pct">23.35%</span></div>
-            <div class="fi-row" style="--rd:80ms"><code>weather_<wbr>severity</code><span class="track"><i style="width:10.04%"></i></span><span class="pct">6.06%</span></div>
-            <div class="fi-row" style="--rd:120ms"><code>segment_<wbr>id</code><span class="track"><i style="width:6.43%"></i></span><span class="pct">3.88%</span></div>
-            <div class="fi-row" style="--rd:160ms"><code>gps_<wbr>speed_<wbr>kmh</code><span class="track"><i style="width:6.08%"></i></span><span class="pct">3.67%</span></div>
-            <div class="fi-row" style="--rd:200ms"><code>prev_<wbr>stop_<wbr>dwell_<wbr>sec</code><span class="track"><i style="width:1.94%"></i></span><span class="pct">1.17%</span></div>
-            <div class="fi-row" style="--rd:240ms"><code>hour_<wbr>of_<wbr>day</code><span class="track"><i style="width:0.62%"></i></span><span class="pct">0.37%</span></div>
-            <div class="fi-row" style="--rd:280ms"><code>day_<wbr>of_<wbr>week</code><span class="track"><i style="width:0.58%"></i></span><span class="pct">0.35%</span></div>
-            <div class="fi-row" style="--rd:320ms"><code>segment_<wbr>distance_<wbr>km</code><span class="track"><i style="width:0.42%"></i></span><span class="pct">0.25%</span></div>
-            <div class="fi-row" style="--rd:360ms"><code>historical_<wbr>segment_<wbr>avg_<wbr>min</code><span class="track"><i style="width:0.41%"></i></span><span class="pct">0.25%</span></div>
-            <div class="fi-row" style="--rd:400ms"><code>scheduled_<wbr>time_<wbr>min</code><span class="track"><i style="width:0.4%"></i></span><span class="pct">0.24%</span></div>
-            <div class="fi-row" style="--rd:440ms"><code>is_<wbr>weekend</code><span class="track"><i style="width:0.08%"></i></span><span class="pct">0.05%</span></div>
+            <div class="fi-row top" style="--rd:0ms"><code>rolling_<wbr>3trip_<wbr>delay_<wbr>min</code><span class="track"><i style="width:100%"></i></span><span class="pct">60.3%</span></div>
+            <div class="fi-row" style="--rd:40ms"><code>is_<wbr>peak_<wbr>hour</code><span class="track"><i style="width:38.7%"></i></span><span class="pct">23.4%</span></div>
+            <div class="fi-row" style="--rd:80ms"><code>weather_<wbr>severity</code><span class="track"><i style="width:10.04%"></i></span><span class="pct">6.1%</span></div>
+            <div class="fi-row" style="--rd:120ms"><code>segment_<wbr>id</code><span class="track"><i style="width:6.43%"></i></span><span class="pct">3.9%</span></div>
+            <div class="fi-row" style="--rd:160ms"><code>gps_<wbr>speed_<wbr>kmh</code><span class="track"><i style="width:6.08%"></i></span><span class="pct">3.7%</span></div>
+            <div class="fi-row" style="--rd:200ms"><code>prev_<wbr>stop_<wbr>dwell_<wbr>sec</code><span class="track"><i style="width:1.94%"></i></span><span class="pct">1.2%</span></div>
+            <div class="fi-row" style="--rd:240ms"><code>hour_<wbr>of_<wbr>day</code><span class="track"><i style="width:0.62%"></i></span><span class="pct">0.4%</span></div>
+            <div class="fi-row" style="--rd:280ms"><code>day_<wbr>of_<wbr>week</code><span class="track"><i style="width:0.58%"></i></span><span class="pct">0.4%</span></div>
+            <div class="fi-row" style="--rd:320ms"><code>segment_<wbr>distance_<wbr>km</code><span class="track"><i style="width:0.42%"></i></span><span class="pct">0.3%</span></div>
+            <div class="fi-row" style="--rd:360ms"><code>historical_<wbr>segment_<wbr>avg_<wbr>min</code><span class="track"><i style="width:0.41%"></i></span><span class="pct">0.3%</span></div>
+            <div class="fi-row" style="--rd:400ms"><code>scheduled_<wbr>time_<wbr>min</code><span class="track"><i style="width:0.4%"></i></span><span class="pct">0.2%</span></div>
+            <div class="fi-row" style="--rd:440ms"><code>is_<wbr>weekend</code><span class="track"><i style="width:0.08%"></i></span><span class="pct">0.0%</span></div>
           </div>
           <p class="small muted" style="margin-top:16px">Impurity-based importance from the random-forest regressor. Bars are scaled to the top feature.</p>
         </div>
@@ -116,7 +116,7 @@
             <div class="split-bar" style="margin-top:16px"><span class="tr">Train · days 1–24</span><span class="te">Test · 25–30</span></div>
             <p class="card-label" style="margin-top:24px">TimeSeriesSplit · fold MAE (min)</p>
             <div class="folds">
-              <div><b>0.788</b><span>Fold 1</span></div><div><b>0.677</b><span>Fold 2</span></div><div><b>0.807</b><span>Fold 3</span></div><div><b>0.644</b><span>Fold 4</span></div><div><b>0.640</b><span>Fold 5</span></div>
+              <div><b>0.8</b><span>Fold 1</span></div><div><b>0.7</b><span>Fold 2</span></div><div><b>0.8</b><span>Fold 3</span></div><div><b>0.6</b><span>Fold 4</span></div><div><b>0.6</b><span>Fold 5</span></div>
             </div>
           </div>
           <div class="card" data-reveal style="--rd:80ms">
@@ -143,7 +143,7 @@
         </div>
         <div class="caveats is-list">
           <article class="caveat" data-reveal><span class="tag">Data</span><h3>The telemetry is generated.</h3><p>All 4,800 pings come from a 30-day simulation of one bus on one corridor, notebook 01, seed 42. Real AIS-140 traffic will be noisier, and the metrics above should be expected to move.</p></article>
-          <article class="caveat" data-reveal style="--rd:60ms"><span class="tag">Leakage</span><h3>Ablation without GPS speed.</h3><p><code class="mono">gps_<wbr>speed_<wbr>kmh</code> can leak the target, because a slower ping is partly the delay itself. The same regressor, seed 42, days 1–24 / 25–30, trained without that feature:</p><div class="figure"><b data-evidence="ablation-mae">…</b> <span class="muted">min MAE</span><span class="muted">R² <span data-evidence="ablation-r2">…</span> · full model MAE 0.627, R² 0.945</span></div></article>
+          <article class="caveat" data-reveal style="--rd:60ms"><span class="tag">Leakage</span><h3>Ablation without GPS speed.</h3><p><code class="mono">gps_<wbr>speed_<wbr>kmh</code> can leak the target, because a slower ping is partly the delay itself. The same regressor, seed 42, days 1–24 / 25–30, trained without that feature:</p><div class="figure"><b data-evidence="ablation-mae">…</b> <span class="muted">min MAE</span><span class="muted">R² <span data-evidence="ablation-r2">…</span> · full model MAE 0.6, R² 0.95</span></div></article>
           <article class="caveat" data-reveal style="--rd:120ms"><span class="tag">Calibration</span><h3>Coverage is measured on synthetic days.</h3><p>The window is centred on the point delay, with a 0.6 min minimum half-width and a 1.35× peak stretch. On held-out days 25–30 it covers <b data-evidence="coverage-overall">…</b> of actual delays (peak <span data-evidence="coverage-peak">…</span>, off-peak <span data-evidence="coverage-offpeak">…</span>). That is not a guarantee for live traffic.</p></article>
           <article class="caveat" data-reveal style="--rd:180ms"><span class="tag">Scope</span><h3>One corridor, one bus.</h3><p>NH-44 Jalandhar → Phagwara, 6 stops, 21.2 km. Other routes, buses and operators are on the roadmap, not in this model.</p></article>
         </div>

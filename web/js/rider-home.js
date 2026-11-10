@@ -5,8 +5,8 @@
   if (!root) return;
   var PRESETS = {
     midday: { hour_of_day: 13, is_weekend: false, weather_severity: 0, rolling_3trip_delay_min: 0.5, prev_stop_dwell_sec: 30, gps_speed_kmh: 34, walk_time_min: 5, label: "Weekday 13:00 · clear" },
-    rush: { hour_of_day: 8, is_weekend: false, weather_severity: 1, rolling_3trip_delay_min: 6.5, prev_stop_dwell_sec: 85, gps_speed_kmh: 18, walk_time_min: 8, label: "Weekday 08:00 · light rain" },
-    evening: { hour_of_day: 18, is_weekend: false, weather_severity: 0, rolling_3trip_delay_min: 14, prev_stop_dwell_sec: 115, gps_speed_kmh: 10, walk_time_min: 8, label: "Weekday 18:00 · severe congestion" }
+    rush: { hour_of_day: 8, is_weekend: false, weather_severity: 1, rolling_3trip_delay_min: 6.5, prev_stop_dwell_sec: 85, gps_speed_kmh: 18, walk_time_min: 5, label: "Weekday 08:00 · light rain" },
+    evening: { hour_of_day: 18, is_weekend: false, weather_severity: 0, rolling_3trip_delay_min: 14, prev_stop_dwell_sec: 115, gps_speed_kmh: 10, walk_time_min: 5, label: "Weekday 18:00 · severe congestion" }
   };
   var NAMES = { rolling_lag: "Earlier buses running late", peak_hour: "Peak hour", weather: "Weather", dwell: "Time stopped at the last stop" };
   var params = new URLSearchParams(location.search);
@@ -29,7 +29,9 @@
   function action(segment, walk) {
     var leave = Number(segment.leave_by_min);
     var when = leave > 0.05 ? "Leave in " + leave.toFixed(1) + " min" : "Leave now";
-    var walkBit = " for a " + Number(walk).toFixed(0) + " min walk";
+    var walkMin = Math.round(Number(walk));
+    var article = walkMin === 8 || walkMin === 11 || walkMin === 18 ? "an" : "a";
+    var walkBit = " for " + article + " " + walkMin + " min walk";
     if (segment.delay_status === "Severe Delay") return when + walkBit + ". This stop is running severely late.";
     if (segment.delay_status === "Moderate Delay") return when + walkBit + ". This stop is late.";
     if (segment.is_low_confidence) return when + walkBit + ". The arrival range is wide, so the midpoint is not an exact time.";
@@ -49,15 +51,15 @@
     var view = arrivalView(segment);
     var range = $("ops-range");
     range.textContent = "Likely arrival " + minutes1(view.lo).toFixed(1) + "–" + minutes1(view.hi).toFixed(1) + " min";
-    range.title = "This stop's 10th–90th delay band, shifted by earlier stops' estimated delays. Not a calibrated cumulative interval.";
     $("ops-action").textContent = action(segment, preset.walk_time_min);
     var list = $("ops-drivers");
     list.replaceChildren();
     (segment.xai_drivers || []).forEach(function (d) {
-      var li = document.createElement("li");
       var minutes = Number(d.minutes);
+      if (!(Number(minutes.toFixed(1)) > 0)) return;
+      var li = document.createElement("li");
       var name = NAMES[d.key] || d.label;
-      li.textContent = name + ": " + (minutes >= 0 ? "+" : "") + minutes.toFixed(1) + " min";
+      li.textContent = name + ": +" + minutes.toFixed(1) + " min";
       list.appendChild(li);
     });
   }

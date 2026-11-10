@@ -51,9 +51,9 @@ const SHORT_NAMES = { "Jalandhar Bus Stand": "Jalandhar BS", "Phagwara Bus Stand
 const LABEL_SIDES = { 0: "left", 1: "bottom", 2: "top", 3: "right", 4: "left", 5: "bottom" };
 
 const PRESETS = {
-  midday: { hour_of_day: 13, is_weekend: false, weather_severity: 0, rolling_3trip_delay_min: 0.5, prev_stop_dwell_sec: 30, gps_speed_kmh: 34 },
-  rush: { hour_of_day: 8, is_weekend: false, weather_severity: 1, rolling_3trip_delay_min: 6.5, prev_stop_dwell_sec: 85, gps_speed_kmh: 18 },
-  evening: { hour_of_day: 18, is_weekend: false, weather_severity: 0, rolling_3trip_delay_min: 14, prev_stop_dwell_sec: 115, gps_speed_kmh: 10 },
+  midday: { hour_of_day: 13, is_weekend: false, weather_severity: 0, rolling_3trip_delay_min: 0.5, prev_stop_dwell_sec: 30, gps_speed_kmh: 34, walk_time_min: 5 },
+  rush: { hour_of_day: 8, is_weekend: false, weather_severity: 1, rolling_3trip_delay_min: 6.5, prev_stop_dwell_sec: 85, gps_speed_kmh: 18, walk_time_min: 5 },
+  evening: { hour_of_day: 18, is_weekend: false, weather_severity: 0, rolling_3trip_delay_min: 14, prev_stop_dwell_sec: 115, gps_speed_kmh: 10, walk_time_min: 5 },
 };
 const PRESET_LABELS = { midday: "Midday clear", rush: "Morning rush and rain", evening: "Severe congestion" };
 const DRIVER_NAMES = {
@@ -66,7 +66,7 @@ const DRIVER_NAMES = {
 const startPreset = PRESETS[params.get("preset")] ? params.get("preset") : "midday";
 const state = {
   corridor: null, result: null, diagnostics: null,
-  simulation: { ...PRESETS[startPreset], walk_time_min: 5 }, activePreset: startPreset,
+  simulation: { ...PRESETS[startPreset] }, activePreset: startPreset,
   selectedSegmentId: Number(params.get("seg")) || 1,
   playing: !SHOT && params.get("paused") !== "1",
   requestSeq: 0, debounceTimer: null, toastTimer: null,
@@ -83,6 +83,13 @@ function escapeHtml(value) {
 }
 function isPeakHour(hour) { return (hour >= 8 && hour <= 10) || (hour >= 17 && hour <= 19); }
 /* Signed number with a real minus sign; 0 stays unsigned. */
+/* Half-up. Number#toFixed rounds 0.945 to "0.94". */
+function fixed(value, digits) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return (0).toFixed(digits);
+  const factor = 10 ** digits;
+  return (Math.round((n + Math.sign(n) * 1e-10) * factor) / factor).toFixed(digits);
+}
 function signed(value, digits = 1) {
   const n = Number(Number(value).toFixed(digits));
   if (n === 0) return (0).toFixed(digits);
@@ -101,6 +108,7 @@ function formatBytes(bytes) {
 function routeName(name) { return String(name).replace("->", "→"); }
 
 function setSyncState(kind, label) {
+  if (!dom.syncPill || !dom.syncLabel) return;
   dom.syncPill.dataset.state = kind;
   dom.syncLabel.textContent = label;
   dom.syncPill.title = label;
@@ -131,7 +139,7 @@ const FORCE_STANDIN = window.location.protocol === "file:" || params.has("standi
 function activateStandin() {
   state.standin = true;
   if (dom.standinBanner) dom.standinBanner.dataset.mode = "standin";
-  dom.syncPill.title = "Stand-in fallback: in-browser heuristic, not the trained model.";
+  if (dom.syncPill) dom.syncPill.title = "Stand-in fallback: in-browser heuristic, not the trained model.";
   dom.footerMode.textContent = "Stand-in model · runs in your browser, not the trained model";
 }
 async function api(url, options = {}) {
@@ -152,7 +160,7 @@ async function api(url, options = {}) {
   if (path.startsWith("/api/diagnostics")) return S.diagnostics();
   throw new Error(`Stand-in has no route for ${path}`);
 }
-const okLabel = () => (state.standin ? "Stand-in fallback" : "Model link active");
+const okLabel = () => (state.standin ? "Stand-in fallback" : "Scenario model");
 
 /* ---------------------------------------------------------------- theme */
 function currentTheme() { return document.documentElement.dataset.theme === "dark" ? "dark" : "light"; }
@@ -280,7 +288,7 @@ async function runSimulation() {
   } catch (error) {
     if (sequence !== state.requestSeq) return;
     setSyncState("error", "Inference offline");
-    showToast("Live inference failed. Check the FastAPI server.", true);
+    showToast("The model did not answer. Check the connection.", true);
   }
 }
 function applySimulation(result) {
@@ -313,17 +321,19 @@ function etaStory(segment) {
   else phrase = `${delay.toFixed(1)} min late`;
   return {
     hop, scheduledArrival, delay, eta: view.eta, lo: view.lo, hi: view.hi, low, phrase,
-    flap: low ? `${Math.floor(view.lo)}–${Math.ceil(view.hi)}` : minutes1(view.eta).toFixed(1),
+    flap: minutes1(view.eta).toFixed(1),
   };
 }
 
 function recommendationFor(segment) {
-  if (!segment || !state.result) return "Select a segment to inspect live rider guidance.";
+  if (!segment || !state.result) return "Select a stop.";
   const weather = state.result.simulation.weather_severity;
   const leave = Number(segment.leave_by_min);
   const walk = Number(state.simulation.walk_time_min ?? 5);
   const when = leave > 0.05 ? `Leave in ${leave.toFixed(1)} min` : "Leave now";
-  const walkBit = ` for a ${walk.toFixed(0)} min walk`;
+  const walkMin = Math.round(walk);
+  const article = walkMin === 8 || walkMin === 11 || walkMin === 18 ? "an" : "a";
+  const walkBit = ` for ${article} ${walkMin} min walk`;
   if (segment.delay_status === "Severe Delay") return `${when}${walkBit}. This stop is running severely late.`;
   if (segment.delay_status === "Moderate Delay") return `${when}${walkBit}. This stop is late.`;
   if (segment.is_low_confidence || weather > 0) return `${when}${walkBit}. The arrival range is wide, so do not treat one minute as exact.`;
@@ -344,12 +354,6 @@ function renderStats() {
     setFlap(dom.statEta, story.flap);
     dom.statEtaFoot.innerHTML = `To <b>${escapeHtml(selected.end_stop)}</b> · ${story.phrase.toLowerCase()}`;
   }
-  const cls = statusClass(corridor.delay_status);
-  dom.statStatus.textContent = statusText(corridor.delay_status);
-  dom.statStatus.style.color = `var(--${cls})`;
-  dom.statStatusDot.style.background = `var(--${cls})`;
-  dom.statStatusFoot.textContent = "From the delay on this trip, not a live feed";
-
   const counts = { "On-Time": 0, "Moderate Delay": 0, "Severe Delay": 0 };
   state.result.segments.forEach((s) => { counts[s.delay_status] += 1; });
   dom.countOnTime.textContent = String(counts["On-Time"]);
@@ -381,7 +385,6 @@ function renderRiderCard() {
   {
     const max = Math.max(Math.ceil(story.hi / 5) * 5, 10);
     dom.etaRangeValue.textContent = `${minutes1(story.lo).toFixed(1)}–${minutes1(story.hi).toFixed(1)} min`;
-    dom.etaRangeValue.title = "This stop's 10th–90th delay band, shifted by earlier stops' estimated delays. Not a calibrated cumulative interval.";
     dom.rangeBar.style.left = `${(story.lo / max) * 100}%`;
     dom.rangeBar.style.width = `${((story.hi - story.lo) / max) * 100}%`;
     dom.rangeBar.style.background = `var(--${cls === "ontime" ? "moderate" : cls})`;
@@ -393,37 +396,25 @@ function renderRiderCard() {
   dom.recommendation.textContent = recommendationFor(segment);
   dom.etaSegmentName.textContent = routeName(segment.name);
   dom.etaClassifier.textContent = statusText(segment.delay_status);
-  dom.etaWindow.textContent = `${signed(segment.lower_bound_min)} to ${signed(segment.upper_bound_min)} min`;
-  if (dom.etaLeave) {
-    const leave = Number(segment.leave_by_min);
-    const walk = Number(state.simulation.walk_time_min ?? segment.walk_time_min ?? 5);
-    const start = Number(segment.window_start_min);
-    dom.etaLeave.textContent = Number.isFinite(leave) ? (leave > 0.05 ? `In ${leave.toFixed(1)} min` : "Now") : "--";
-    dom.etaLeave.title = Number.isFinite(start)
-      ? `Window starts in ${start.toFixed(1)} min, minus a ${walk.toFixed(0)} min walk`
-      : "Window start minus walk time";
-  }
 }
 
 function renderXai() {
   const segment = getSelectedSegment();
   if (!segment) return;
-  const drivers = segment.xai_drivers || [];
+  const drivers = (segment.xai_drivers || []).filter((d) => Number(Number(d.minutes).toFixed(1)) > 0);
   const maxMagnitude = Math.max(...drivers.map((d) => Math.abs(Number(d.minutes))), 0.5);
   dom.xaiSegment.textContent = `SEG ${String(segment.segment_id).padStart(2, "0")}`;
   dom.xaiBars.innerHTML = drivers.map((d) => {
     const m = Number(d.minutes);
-    const w = Math.abs(m) < 0.005 ? 0 : clamp((Math.abs(m) / maxMagnitude) * 100, 3, 100);
-    const neg = m < 0;
+    const w = clamp((Math.abs(m) / maxMagnitude) * 100, 3, 100);
     const plain = DRIVER_NAMES[d.key] || d.label;
     return `<div class="xai-row" role="listitem">
         <span class="xai-label">${escapeHtml(plain)}</span>
-        <span class="xai-track" aria-hidden="true"><span class="neg"><i style="width:${neg ? w : 0}%"></i></span><span class="pos"><i style="width:${neg ? 0 : w}%"></i></span></span>
-        <span class="xai-value${neg ? " is-neg" : ""}">${signed(m)}m</span>
+        <span class="xai-track" aria-hidden="true"><span class="neg"><i style="width:0%"></i></span><span class="pos"><i style="width:${w}%"></i></span></span>
+        <span class="xai-value">${signed(m)} min</span>
       </div>`;
   }).join("");
-  dom.xaiBaseline.textContent = `${signed(segment.xai_baseline_min)} min`;
-  dom.xaiSum.innerHTML = `<span>Baseline + factors = predicted delay</span><b>${signed(segment.predicted_delay_min)} min</b>`;
+  if (dom.xaiBaseline) dom.xaiBaseline.textContent = `${signed(segment.xai_baseline_min)} min`;
 }
 
 function renderSegmentList() {
@@ -435,7 +426,7 @@ function renderSegmentList() {
     const id = `SEG ${String(s.segment_id).padStart(2, "0")}`;
     const d = Number(s.predicted_delay_min);
     const dcls = d >= 5 ? "is-severe" : d >= 2 ? "is-late" : d <= -0.5 ? "is-early" : "";
-    const etaText = story.low ? `${Math.floor(story.lo)}–${Math.ceil(story.hi)}` : minutes1(story.eta).toFixed(1);
+    const etaText = minutes1(story.eta).toFixed(1);
     const band = `${minutes1(story.lo).toFixed(1)}–${minutes1(story.hi).toFixed(1)}`;
     return `<button class="seg-row seg-item${sel}" data-segment-id="${s.segment_id}" type="button" aria-pressed="${sel ? "true" : "false"}">
         <span class="seg-id">${id}</span>
@@ -446,7 +437,6 @@ function renderSegmentList() {
         <span class="seg-window">${band}</span>
         <span class="seg-nums"><span>Scheduled <b>${minutes1(story.scheduledArrival).toFixed(1)}</b></span><span>Hop time <b>${minutes1(story.hop).toFixed(1)}</b></span><span>ETA <b>${etaText}</b> min</span><span>Delay <b class="seg-delay ${dcls}">${signed(d)}</b></span><span>Likely <b>${band}</b></span></span>
         <span class="seg-badge"><span class="status-chip ${cls}">${statusText(s.delay_status)}</span></span>
-        <span class="seg-conf"><span>${Number(s.leave_by_min).toFixed(1)} min</span></span>
       </button>`;
   }).join("");
 }
@@ -718,15 +708,11 @@ function updateHudPosition(timestamp = 0, force = false) {
   if (state.busMarker) state.busMarker.setLatLng([located.lat, located.lon]);
   if (!force && timestamp - state.lastHudTs < 120) return;
   state.lastHudTs = timestamp;
-  dom.hudLat.textContent = located.lat.toFixed(5);
-  dom.hudLon.textContent = located.lon.toFixed(5);
   dom.hudSpeed.textContent = liveSpeedFor(located.segment).toFixed(1);
   dom.hudNextStop.textContent = located.segment.end_stop;
   const pct = clamp((state.busProgressKm / state.routeTotalKm) * 100, 0, 100);
   dom.hudProgressValue.textContent = `${pct.toFixed(0)}%`;
   dom.hudProgressBar.style.width = `${pct}%`;
-  dom.hudState.textContent = state.playing ? "Tracking" : "Paused";
-  dom.hudState.classList.toggle("is-paused", !state.playing);
   if (state.tilesFailed) {
     const g = document.getElementById("fb-bus");
     if (g) renderFallback();
@@ -762,8 +748,8 @@ function setPlayName() {
 
 function applyPreset(name) {
   if (!PRESETS[name]) return;
-  const walk = state.simulation.walk_time_min ?? 5;
-  state.simulation = { ...PRESETS[name], walk_time_min: walk };
+  state.simulation = { ...PRESETS[name] };
+  if (state.simulation.walk_time_min == null) state.simulation.walk_time_min = 5;
   setPresetSelection(name);
   syncControlsFromState();
   scheduleSimulation(40);
@@ -852,7 +838,7 @@ function switchView(view) {
   } else if (state.standin) {
     dom.footerMode.textContent = "Stand-in model · runs in your browser, not the trained model";
   } else {
-    dom.footerMode.textContent = view === "live" ? "Live simulation · FastAPI + scikit-learn" : "Evaluator audit · frozen artifacts + validation proof";
+    dom.footerMode.textContent = view === "live" ? "Scenario model · not a live GPS feed" : "Evaluator audit · frozen artifacts + validation proof";
   }
   setSheet(false);
   if (view === "live" && state.map) window.setTimeout(() => { state.map.invalidateSize(); fitCorridor(); }, 60);
@@ -912,12 +898,12 @@ function renderDiagnostics(data) {
   dom.verdict.classList.toggle("is-bad", !passed);
 
   const cards = [
-    { label: "Model MAE", value: Number(metrics.reg_mae ?? 0).toFixed(3), unit: "min", note: `Naive baseline ${Number(metrics.baseline_mae ?? 0).toFixed(3)} min`, cls: "is-good" },
-    { label: "Error reduction", value: Number(metrics.error_reduction_pct ?? 0).toFixed(2), unit: "%", note: "Lower error than baseline", cls: "is-good" },
-    { label: "R² score", value: Number(metrics.reg_r2 ?? 0).toFixed(3), unit: "", note: "Held-out future window", cls: "" },
+    { label: "Model MAE", value: Number(metrics.reg_mae ?? 0).toFixed(1), unit: "min", note: `Naive baseline ${Number(metrics.baseline_mae ?? 0).toFixed(1)} min`, cls: "is-good" },
+    { label: "Error reduction", value: String(Math.round(Number(metrics.error_reduction_pct ?? 0))), unit: "%", note: "Lower error than baseline", cls: "is-good" },
+    { label: "R² score", value: fixed(metrics.reg_r2 ?? 0, 2), unit: "", note: "Held-out future window", cls: "" },
     { label: "Classifier accuracy", value: (Number(metrics.clf_accuracy ?? 0) * 100).toFixed(1), unit: "%", note: `Macro F1 ${(Number(metrics.clf_macro_f1 ?? 0) * 100).toFixed(1)}%`, cls: "is-good" },
-    { label: "Data retention", value: Number(summary.retention_rate_pct ?? 0).toFixed(2), unit: "%", note: `${Number(summary.clean_records ?? 0).toLocaleString("en-US")} clean rows`, cls: "" },
-    { label: "Peak interval", value: Number(metadata.uncertainty?.peak_hour_interval_width ?? 0).toFixed(2), unit: "min", note: "10th–90th band, widened at peak", cls: "is-warn" },
+    { label: "Data retention", value: String(Math.round(Number(summary.retention_rate_pct ?? 0))), unit: "%", note: `${Number(summary.clean_records ?? 0).toLocaleString("en-US")} clean rows`, cls: "" },
+    { label: "Peak interval", value: Number(metadata.uncertainty?.peak_hour_interval_width ?? 0).toFixed(1), unit: "min", note: `Off-peak ${Number(metadata.uncertainty?.off_peak_interval_width ?? 0).toFixed(1)} min`, cls: "is-warn" },
   ];
   dom.metricGrid.innerHTML = cards.map((c) => `<article class="metric ${c.cls}">
       <h3 class="label">${escapeHtml(c.label)}</h3>
@@ -925,7 +911,7 @@ function renderDiagnostics(data) {
       <p class="kpi-foot">${escapeHtml(c.note)}</p>
     </article>`).join("");
 
-  dom.retentionTag.textContent = `${Number(summary.retention_rate_pct ?? 0).toFixed(2)}% retention`;
+  dom.retentionTag.textContent = `${Math.round(Number(summary.retention_rate_pct ?? 0))}% retention`;
   const raw = Number(summary.raw_records ?? 4800);
   dom.dqFunnel.innerHTML = (audit.cleaning_funnel || []).map((row) => {
     const records = Number(row.records ?? 0);
@@ -959,8 +945,8 @@ function renderDiagnostics(data) {
   const peak = Number(metadata.uncertainty?.peak_hour_interval_width ?? 0);
   const ratio = off > 0 ? peak / off : 0;
   dom.uncertaintyVisual.innerHTML = `
-    <div class="hbar"><span class="hbar-label">Off-peak</span><span class="track"><i style="width:${clamp((off / Math.max(peak, 0.01)) * 100, 4, 100)}%"></i></span><span class="hbar-value">${off.toFixed(3)} min</span></div>
-    <div class="hbar is-peak"><span class="hbar-label">Peak</span><span class="track"><i style="width:100%"></i></span><span class="hbar-value">${peak.toFixed(3)} min</span></div>`;
+    <div class="hbar"><span class="hbar-label">Off-peak</span><span class="track"><i style="width:${clamp((off / Math.max(peak, 0.01)) * 100, 4, 100)}%"></i></span><span class="hbar-value">${off.toFixed(1)} min</span></div>
+    <div class="hbar is-peak"><span class="hbar-label">Peak</span><span class="track"><i style="width:100%"></i></span><span class="hbar-value">${peak.toFixed(1)} min</span></div>`;
   dom.uncertaintyNote.textContent = `Peak-hour 10th–90th bands are ${ratio.toFixed(1)}× wider than off-peak. Width is not the same as observed coverage.`;
 
   const plot = data.plots?.[0];
@@ -1053,7 +1039,7 @@ async function fillCoverageLine() {
       line.textContent = "Observed coverage: unavailable. Upstream-lag ablation: not measured.";
       return;
     }
-    line.textContent = `Observed coverage on days ${coverage.test_days}: ${pct(coverage.overall)}% of ${coverage.n_test} rows (peak ${pct(coverage.peak)}%, off-peak ${pct(coverage.off_peak)}%). GPS-speed ablation MAE ${Number(metrics.reg_mae).toFixed(3)} min, R² ${Number(metrics.reg_r2).toFixed(3)}. Upstream-lag ablation: not measured.`;
+    line.textContent = `Observed coverage on days ${coverage.test_days}: ${pct(coverage.overall)}% of ${coverage.n_test} rows (peak ${pct(coverage.peak)}%, off-peak ${pct(coverage.off_peak)}%). GPS-speed ablation MAE ${fixed(metrics.reg_mae, 1)} min, R² ${fixed(metrics.reg_r2, 2)}. Upstream-lag ablation: not measured.`;
   } catch (error) {
     line.textContent = "Observed coverage: unavailable. Upstream-lag ablation: not measured.";
     fillSplitCounts(null);
