@@ -12,6 +12,7 @@
   var params = new URLSearchParams(location.search);
   var presetName = PRESETS[params.get("preset")] ? params.get("preset") : "midday";
   var seg = Number(params.get("seg")) || 1;
+  var requests = createRequestGate();
 
   function $(id) { return document.getElementById(id); }
   function setPressed() {
@@ -45,9 +46,8 @@
     status.dataset.status = segment.delay_status === "Severe Delay" ? "severe" : segment.delay_status === "Moderate Delay" ? "moderate" : "ontime";
     var leave = Number(segment.leave_by_min);
     $("ops-leave").textContent = leave > 0.05 ? "in " + leave.toFixed(1) + " min" : "now";
-    var lo = Math.max(Number(segment.scheduled_time_min) + Number(segment.lower_bound_min), 0);
-    var hi = Math.max(Number(segment.scheduled_time_min) + Number(segment.upper_bound_min), lo);
-    $("ops-range").textContent = "Arrival range " + lo.toFixed(1) + "–" + hi.toFixed(1) + " min (10th–90th band, not a guarantee)";
+    var view = arrivalView(segment);
+    $("ops-range").textContent = "Arrival range " + minutes1(view.lo).toFixed(1) + "–" + minutes1(view.hi).toFixed(1) + " min (10th–90th band, not a guarantee)";
     $("ops-action").textContent = action(segment, preset.walk_time_min);
     var list = $("ops-drivers");
     list.replaceChildren();
@@ -66,6 +66,7 @@
   }
   function load() {
     setPressed();
+    var token = requests.start();
     fetch("/api/simulate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -73,7 +74,13 @@
     }).then(function (r) {
       if (!r.ok) throw new Error(String(r.status));
       return r.json();
-    }).then(show).catch(fail);
+    }).then(function (result) {
+      if (!requests.isCurrent(token)) return;
+      show(result);
+    }).catch(function () {
+      if (!requests.isCurrent(token)) return;
+      fail();
+    });
   }
   root.querySelectorAll("[data-ops-preset]").forEach(function (btn) {
     btn.addEventListener("click", function () {

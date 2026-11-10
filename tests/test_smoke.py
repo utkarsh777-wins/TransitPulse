@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -279,3 +281,89 @@ def test_render_blueprint() -> None:
     assert 'value: "3.11.18"' in blueprint
     assert "key: PORT" not in blueprint
     assert (ROOT / ".python-version").read_text(encoding="utf-8").strip() == "3.11.18"
+
+
+def test_later_segment_arrival_matches_homepage_demo_and_csv() -> None:
+    """Segment 5 must use the cumulative arrival, the same function the pages call."""
+    with TestClient(app) as client:
+        payload = client.post("/api/simulate", json=SIMULATION).json()
+        evidence = client.get("/api/evidence").json()
+    segment = payload["segments"][4]
+    assert segment["segment_id"] == 5
+    hop_only = segment["scheduled_time_min"] + segment["lower_bound_min"]
+    cumulative = segment["estimated_arrival_offset_min"]
+    assert cumulative > hop_only + 10
+
+    script = r"""
+const api = require("./web/js/arrival.js");
+const seg = JSON.parse(process.argv[1]);
+const view = api.arrivalView(seg);
+const hopLo = Math.max(0, Number(seg.scheduled_time_min) + Number(seg.lower_bound_min));
+if (Math.abs(view.eta - Math.max(0, Number(seg.estimated_arrival_offset_min))) > 1e-9) process.exit(2);
+if (view.lo - view.eta > 0.05 || view.eta - view.hi > 0.05) process.exit(3);
+if (Math.abs(view.lo - hopLo) < 1) process.exit(4);
+const walk = Number(seg.walk_time_min);
+if (Math.abs(api.minutes1(view.eta) - (Number(seg.leave_by_min) + walk)) > 0.15) process.exit(5);
+const row = [
+  seg.segment_id, seg.start_stop, seg.end_stop,
+  api.formatMinutes(seg.scheduled_arrival_offset_min), api.formatMinutes(view.eta),
+  api.formatMinutes(seg.predicted_delay_min), api.formatMinutes(view.lo), api.formatMinutes(view.hi),
+  api.formatMinutes(seg.leave_by_min), seg.delay_status,
+].map(api.csvCell);
+if (row[6] !== api.formatMinutes(view.lo)) process.exit(6);
+if (row[6] !== api.csvCell(row[6])) process.exit(16);
+if (api.csvCell(-1.25) !== "-1.25") process.exit(7);
+if (api.csvCell("-1.25") !== "-1.25") process.exit(8);
+if (!api.csvCell("=1+1").startsWith("'")) process.exit(9);
+if (!api.csvCell("+cmd").startsWith("'")) process.exit(10);
+if (api.csvCell('PAP, "Chowk"') !== '"PAP, ""Chowk""' + '"') process.exit(11);
+const gate = api.createRequestGate();
+const first = gate.start();
+const second = gate.start();
+const events = [];
+function settle(token, ok, value) {
+  if (!gate.isCurrent(token)) { events.push("drop"); return; }
+  events.push(ok ? "show:" + value : "fail");
+}
+settle(first, true, "old");
+settle(second, false, "err");
+if (events.indexOf("show:old") !== -1) process.exit(12);
+if (events.indexOf("fail") === -1 || events.indexOf("drop") === -1) process.exit(13);
+const third = gate.start();
+settle(second, true, "stale-error-path");
+settle(third, true, "new");
+if (events.indexOf("show:stale-error-path") !== -1) process.exit(14);
+if (events.indexOf("show:new") === -1) process.exit(15);
+console.log(JSON.stringify({ lo: view.lo, hi: view.hi, eta: view.eta, row: row.join(",") }));
+"""
+    proc = subprocess.run(
+        ["node", "-e", script, json.dumps(segment)],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr + proc.stdout
+    rendered = json.loads(proc.stdout)
+    assert rendered["eta"] == pytest.approx(cumulative, abs=1e-6)
+
+    home = (ROOT / "web" / "js" / "rider-home.js").read_text(encoding="utf-8")
+    demo_js = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+    demo_html = (ROOT / "web" / "demo.html").read_text(encoding="utf-8")
+    index = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    assert "arrivalView(" in home
+    assert "createRequestGate" in home
+    assert home.count("isCurrent") >= 2
+    assert "arrivalView(" in demo_js
+    assert "scheduled_time_min) + Number(segment.lower_bound_min)" not in demo_js
+    assert "scheduled_arrival_min" in demo_js
+    assert 'src="js/arrival.js"' in index
+    assert 'src="js/arrival.js"' in demo_html
+    assert index.index("js/arrival.js") < index.index("js/rider-home.js")
+    assert "3,756" not in demo_html
+    assert "939" not in demo_html
+    assert 'id="split-train"' in demo_html
+    assert "n_train" in demo_js
+    assert evidence["ablation"]["n_train"] == 3750
+    assert evidence["ablation"]["n_test"] == 945
+    assert evidence["interval_coverage"]["n_test"] == 945

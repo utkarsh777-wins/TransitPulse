@@ -299,23 +299,22 @@ function getSelectedSegment() {
 function getSegmentById(id) { return state.result?.segments.find((s) => s.segment_id === id) || null; }
 
 /* ---------------------------------------------------------------- the ETA story
-   One number everywhere: minutes until the bus reaches the end stop of the selected segment
-   (estimated_segment_time_min). Early/late is a signed delta against the schedule — never a negative ETA.
-   The arrival range is always the 10th–90th band (widened at peak), not a coverage promise. */
+   Arrives-in is the cumulative estimated_arrival_offset_min from the trip start.
+   The range is that same clock: earlier hops keep their point delay, and this hop
+   uses its 10th–90th delay band. Leave-by is the API value, which uses the same arrival. */
 function etaStory(segment) {
   const sched = Number(segment.scheduled_time_min);
   const delay = Number(segment.predicted_delay_min);
-  const eta = Number(segment.estimated_segment_time_min ?? sched + Math.max(delay, 0));
-  const lo = Math.max(sched + Number(segment.lower_bound_min), 0.5);
-  const hi = Math.max(sched + Number(segment.upper_bound_min), lo + 0.1);
+  const view = arrivalView(segment);
+  const scheduledArrival = Number(segment.scheduled_arrival_offset_min);
   const low = Boolean(segment.is_low_confidence);
   let phrase;
   if (Math.abs(delay) < 0.5) phrase = "On schedule";
   else if (delay < 0) phrase = `${Math.abs(delay).toFixed(1)} min early`;
   else phrase = `${delay.toFixed(1)} min late`;
   return {
-    sched, delay, eta, lo, hi, low, phrase,
-    flap: low ? `${Math.floor(lo)}–${Math.ceil(hi)}` : eta.toFixed(1),
+    sched, scheduledArrival, delay, eta: view.eta, lo: view.lo, hi: view.hi, low, phrase,
+    flap: low ? `${Math.floor(view.lo)}–${Math.ceil(view.hi)}` : minutes1(view.eta).toFixed(1),
   };
 }
 
@@ -382,12 +381,13 @@ function renderRiderCard() {
   dom.etaRange.hidden = false;
   {
     const max = Math.max(Math.ceil(story.hi / 5) * 5, 10);
-    dom.etaRangeValue.textContent = `${story.lo.toFixed(1)}–${story.hi.toFixed(1)} min`;
+    dom.etaRangeValue.textContent = `${minutes1(story.lo).toFixed(1)}–${minutes1(story.hi).toFixed(1)} min`;
     dom.rangeBar.style.left = `${(story.lo / max) * 100}%`;
     dom.rangeBar.style.width = `${((story.hi - story.lo) / max) * 100}%`;
     dom.rangeBar.style.background = `var(--${cls === "ontime" ? "moderate" : cls})`;
-    dom.rangeSched.style.left = `calc(${(story.sched / max) * 100}% - 1px)`;
-    dom.rangeSched.title = `Scheduled ${story.sched.toFixed(1)} min`;
+    const schedPct = Math.min(100, Math.max(0, (story.scheduledArrival / max) * 100));
+    dom.rangeSched.style.left = `calc(${schedPct}% - 1px)`;
+    dom.rangeSched.title = `Scheduled arrival ${minutes1(story.scheduledArrival).toFixed(1)} min`;
     dom.rangeMax.textContent = `${max} min`;
   }
   dom.recommendation.textContent = recommendationFor(segment);
@@ -435,15 +435,16 @@ function renderSegmentList() {
     const id = `SEG ${String(s.segment_id).padStart(2, "0")}`;
     const d = Number(s.predicted_delay_min);
     const dcls = d >= 5 ? "is-severe" : d >= 2 ? "is-late" : d <= -0.5 ? "is-early" : "";
-    const etaText = story.low ? `${story.lo.toFixed(0)}–${story.hi.toFixed(0)}` : story.eta.toFixed(1);
+    const etaText = story.low ? `${Math.floor(story.lo)}–${Math.ceil(story.hi)}` : minutes1(story.eta).toFixed(1);
+    const band = `${minutes1(story.lo).toFixed(1)}–${minutes1(story.hi).toFixed(1)}`;
     return `<button class="seg-row seg-item${sel}" data-segment-id="${s.segment_id}" type="button" aria-pressed="${sel ? "true" : "false"}">
         <span class="seg-id">${id}</span>
         <span class="seg-name"><strong data-id="${id}">${escapeHtml(shortName(s.start_stop))} → ${escapeHtml(shortName(s.end_stop))}</strong><small>${Number(s.distance_km).toFixed(1)} km</small></span>
         <span class="seg-num">${Number(s.scheduled_time_min).toFixed(1)}</span>
         <span class="seg-num is-strong">${etaText}</span>
         <span class="seg-num seg-delay ${dcls}">${signed(d)}</span>
-        <span class="seg-window">${signed(s.lower_bound_min)} to ${signed(s.upper_bound_min)}</span>
-        <span class="seg-nums"><span>Sched <b>${Number(s.scheduled_time_min).toFixed(1)}</b></span><span>ETA <b>${etaText}</b> min</span><span>Delay <b class="seg-delay ${dcls}">${signed(d)}</b></span><span>10th–90th <b>${signed(s.lower_bound_min)}…${signed(s.upper_bound_min)}</b></span></span>
+        <span class="seg-window">${band}</span>
+        <span class="seg-nums"><span>Sched <b>${Number(s.scheduled_time_min).toFixed(1)}</b></span><span>ETA <b>${etaText}</b> min</span><span>Delay <b class="seg-delay ${dcls}">${signed(d)}</b></span><span>10th–90th <b>${band}</b></span></span>
         <span class="seg-badge"><span class="status-chip ${cls}">${statusText(s.delay_status)}</span></span>
         <span class="seg-conf"><span>${Number(s.leave_by_min).toFixed(1)} min</span></span>
       </button>`;
@@ -996,10 +997,6 @@ function renderDiagnostics(data) {
   ];
   dom.diagRuntime.innerHTML = items.map(([k, v]) => `<div><dt>${escapeHtml(k)}</dt><dd class="${v === "Passed" ? "is-pass" : ""}">${escapeHtml(v)}</dd></div>`).join("");
 }
-function csvCell(value) {
-  const text = String(value ?? "");
-  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-}
 function downloadCsv(filename, rows) {
   const body = rows.map((row) => row.map(csvCell).join(",")).join("\n");
   const blob = new Blob([body], { type: "text/csv;charset=utf-8" });
@@ -1013,18 +1010,19 @@ function downloadScenarioCsv() {
   if (!state.result) return;
   const sim = state.result.simulation || {};
   const rows = [["field", "value"], ["provenance", "POST /api/simulate for this scenario. Not a live GPS feed."], ["hour_of_day", sim.hour_of_day], ["weather_severity", sim.weather_severity], ["upstream_lag_min", sim.rolling_3trip_delay_min], ["walk_min", sim.walk_time_min], ["gps_speed_kmh", sim.gps_speed_kmh]];
-  rows.push(["segment", "from", "to", "scheduled_min", "delay_min", "range_low_min", "range_high_min", "leave_by_min", "status"]);
+  rows.push(["segment", "from", "to", "scheduled_arrival_min", "arrives_in_min", "delay_min", "range_low_min", "range_high_min", "leave_by_min", "status"]);
   state.result.segments.forEach((segment) => {
-    const sched = Number(segment.scheduled_time_min);
+    const view = arrivalView(segment);
     rows.push([
       segment.segment_id,
       segment.start_stop,
       segment.end_stop,
-      sched.toFixed(1),
-      Number(segment.predicted_delay_min).toFixed(1),
-      Math.max(sched + Number(segment.lower_bound_min), 0).toFixed(1),
-      Math.max(sched + Number(segment.upper_bound_min), 0).toFixed(1),
-      Number(segment.leave_by_min).toFixed(1),
+      formatMinutes(segment.scheduled_arrival_offset_min),
+      formatMinutes(view.eta),
+      formatMinutes(segment.predicted_delay_min),
+      formatMinutes(view.lo),
+      formatMinutes(view.hi),
+      formatMinutes(segment.leave_by_min),
       segment.delay_status,
     ]);
   });
@@ -1050,6 +1048,7 @@ async function fillCoverageLine() {
     const coverage = data.interval_coverage || {};
     const metrics = (data.ablation && data.ablation.metrics) || {};
     const pct = (value) => (Number(value) * 100).toFixed(1);
+    fillSplitCounts(data);
     if (!coverage.overall && coverage.overall !== 0) {
       line.textContent = "Observed coverage: unavailable. Upstream-lag ablation: not measured.";
       return;
@@ -1057,7 +1056,25 @@ async function fillCoverageLine() {
     line.textContent = `Observed coverage on days ${coverage.test_days}: ${pct(coverage.overall)}% of ${coverage.n_test} rows (peak ${pct(coverage.peak)}%, off-peak ${pct(coverage.off_peak)}%). GPS-speed ablation MAE ${Number(metrics.reg_mae).toFixed(3)} min, R² ${Number(metrics.reg_r2).toFixed(3)}. Upstream-lag ablation: not measured.`;
   } catch (error) {
     line.textContent = "Observed coverage: unavailable. Upstream-lag ablation: not measured.";
+    fillSplitCounts(null);
   }
+}
+function fillSplitCounts(data) {
+  const train = document.getElementById("split-train");
+  const test = document.getElementById("split-test");
+  if (!train || !test) return;
+  const ablation = (data && data.ablation) || {};
+  const coverage = (data && data.interval_coverage) || {};
+  const split = ablation.split || {};
+  const label = (days, count) => {
+    const pretty = String(days || "").replace("-", "–");
+    if (count === undefined || count === null || Number.isNaN(Number(count))) {
+      return `Days ${pretty} · count not measured`;
+    }
+    return `Days ${pretty} · ${Number(count).toLocaleString("en-US")} segments`;
+  };
+  train.textContent = label(split.train_days || "1-24", ablation.n_train);
+  test.textContent = label(split.test_days || coverage.test_days || "25-30", ablation.n_test ?? coverage.n_test);
 }
 async function loadDiagnostics() {
   try {

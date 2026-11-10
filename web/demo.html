@@ -413,7 +413,7 @@
           </header>
           <div class="split">
             <div class="split-bar" aria-hidden="true"><span class="split-train">Days 1–24</span><span class="split-test">Days 25–30</span></div>
-            <div class="split-labels"><span>Days 1–24 · 3,756 segments</span><span>Days 25–30 · 939 segments</span></div>
+            <div class="split-labels"><span id="split-train">Days 1–24 · count not measured</span><span id="split-test">Days 25–30 · count not measured</span></div>
           </div>
           <ul class="checks" id="proof-list">
             <li>No future leakage across the split boundary</li>
@@ -500,6 +500,7 @@
   <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+  <script defer src="js/arrival.js"></script>
   <script defer src="standin.js"></script>
   <script defer src="app.js"></script>
   <script defer src="js/site.js"></script>
