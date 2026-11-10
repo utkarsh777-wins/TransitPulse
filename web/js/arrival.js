@@ -10,10 +10,8 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  /* lower/upper are this hop's delay band, centred on predicted_delay_min.
-     Adding them only to the scheduled arrival drops delay already predicted
-     on earlier hops, so the point arrival can fall outside the drawn window.
-     Shift the band by the earlier hops' point delay. Segment 1 has no earlier delay. */
+  /* This stop's 10th–90th delay band, shifted by earlier stops' point delays.
+     Not a calibrated cumulative interval. Segment 1 has no earlier delay. */
   function arrivalView(segment) {
     var scheduled = Number(segment.scheduled_arrival_offset_min);
     var point = Number(segment.predicted_delay_min);

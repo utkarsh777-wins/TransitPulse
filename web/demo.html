@@ -194,7 +194,7 @@
         <section class="card eta-card" id="eta-card" aria-labelledby="eta-title">
           <div class="notice" id="peak-alert" hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 3 20h18L12 4Z"/><path d="M12 10v4M12 17h.01"/></svg>
-            <p><strong>Peak hour.</strong> <span>The 10th–90th range is wider. It is not an 80% or 85% promise.</span></p>
+            <p><strong>Peak hour.</strong> <span>The likely arrival is wider. It is not an 80% or 85% promise.</span></p>
           </div>
           <header class="card-head">
             <div class="card-title">
@@ -217,7 +217,7 @@
 
           <div class="eta-window" id="eta-range" hidden>
             <div class="eta-window-top">
-              <span class="label">10th–90th minute range</span>
+              <span class="label" title="This stop's 10th–90th delay band, shifted by earlier stops' estimated delays. Not a calibrated cumulative interval.">Likely arrival</span>
               <strong class="mono" id="eta-range-value">--</strong>
             </div>
             <div class="window-track" aria-hidden="true">
@@ -271,10 +271,10 @@
           <div class="seg-row seg-head" aria-hidden="true">
             <span>Seg</span>
             <span>Route</span>
-            <span class="r">Sched</span>
+            <span class="r" title="Scheduled arrival from the trip start">Scheduled</span>
             <span class="r">ETA</span>
             <span class="r">Delay</span>
-            <span>10th–90th</span>
+            <span title="This stop's 10th–90th delay band, shifted by earlier stops' estimated delays. Not a calibrated cumulative interval.">Likely</span>
             <span>Status</span>
             <span>Leave by</span>
           </div>
@@ -383,7 +383,7 @@
         <ul>
           <li>Removing GPS speed and retraining is measured. The MAE and R² are filled from <code>/api/evidence</code>.</li>
           <li>Upstream lag (<code>rolling_3trip_delay_min</code>) is the largest feature and can carry information about the delay itself. An ablation that removes it is <strong>not measured</strong>. This page does not claim zero leakage.</li>
-          <li>The rider range is the 10th–90th percentile band, widened in peak hours. It is not an 80% or 85% guarantee. Observed coverage on synthetic days 25–30 is a separate number.</li>
+          <li>Likely arrival is this stop's 10th–90th delay band, shifted by earlier stops' estimated delays. It is not a calibrated cumulative interval, and it is not an 80% or 85% guarantee. Observed coverage on synthetic days 25–30 is a separate number.</li>
         </ul>
         <p id="coverage-line">Observed coverage: loading from the committed metadata.</p>
         <div class="demo-error-actions">

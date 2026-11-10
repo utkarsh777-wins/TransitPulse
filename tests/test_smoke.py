@@ -357,6 +357,14 @@ console.log(JSON.stringify({ lo: view.lo, hi: view.hi, eta: view.eta, row: row.j
     assert "arrivalView(" in demo_js
     assert "scheduled_time_min) + Number(segment.lower_bound_min)" not in demo_js
     assert "scheduled_arrival_min" in demo_js
+    assert "shifted_band_low_min" in demo_js
+    assert "shifted_band_high_min" in demo_js
+    assert "range_low_min" not in demo_js
+    assert "story.scheduledArrival" in demo_js
+    assert "hop time" in demo_js
+    assert "Likely arrival" in home
+    assert "10th–90th minute range" not in demo_html
+    assert "not a calibrated cumulative interval" in demo_html.lower() or "Not a calibrated cumulative interval" in demo_html
     assert 'src="js/arrival.js"' in index
     assert 'src="js/arrival.js"' in demo_html
     assert index.index("js/arrival.js") < index.index("js/rider-home.js")

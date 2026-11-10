@@ -47,7 +47,9 @@
     var leave = Number(segment.leave_by_min);
     $("ops-leave").textContent = leave > 0.05 ? "in " + leave.toFixed(1) + " min" : "now";
     var view = arrivalView(segment);
-    $("ops-range").textContent = "Arrival range " + minutes1(view.lo).toFixed(1) + "–" + minutes1(view.hi).toFixed(1) + " min (10th–90th band, not a guarantee)";
+    var range = $("ops-range");
+    range.textContent = "Likely arrival " + minutes1(view.lo).toFixed(1) + "–" + minutes1(view.hi).toFixed(1) + " min";
+    range.title = "This stop's 10th–90th delay band, shifted by earlier stops' estimated delays. Not a calibrated cumulative interval.";
     $("ops-action").textContent = action(segment, preset.walk_time_min);
     var list = $("ops-drivers");
     list.replaceChildren();

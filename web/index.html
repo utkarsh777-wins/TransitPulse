@@ -123,7 +123,7 @@
                   <span class="axis-mark sched" style="left:56.67%"><span class="t">Sched. 17:42</span><i></i></span>
                 </div>
                 <div class="axis-legend">
-                  <span><i style="background:color-mix(in srgb,var(--accent) 22%,var(--surface));border:1.5px solid var(--accent)"></i>Likely window (10th–90th pct.)</span>
+                  <span><i style="background:color-mix(in srgb,var(--accent) 22%,var(--surface));border:1.5px solid var(--accent)"></i>Likely window</span>
                   <span><i style="background:var(--accent);width:4px"></i>Most likely</span>
                 </div>
               </div>
@@ -234,7 +234,7 @@
           <li class="rail-step" style="--rd:120ms"><div class="node"><b>02</b></div><h3>Quality gates</h3><p>Geofence, speed sanity, dwell imputation and duplicate removal.</p><p class="mono-sub">4 gates · 97.81% kept</p></li>
           <li class="rail-step" style="--rd:240ms"><div class="node"><b>03</b></div><h3>Delay model</h3><p>Random-forest regressor and classifier over 12 features.</p><p class="mono-sub">RF · days 1–24 train</p></li>
           <li class="rail-step" style="--rd:360ms"><div class="node"><b>04</b></div><h3>Window</h3><p>10th and 90th percentile models set the range. Peak hours widen it.</p><p class="mono-sub">q10 / q90 · ×1.35 at peak</p></li>
-          <li class="rail-step is-out" style="--rd:480ms"><div class="node"><b>05</b></div><h3>Rider guidance</h3><p>10th–90th arrival range, status, and a leave-by time.</p><p class="mono-sub">leave_by_min from POST /api/<wbr>simulate</p></li>
+          <li class="rail-step is-out" style="--rd:480ms"><div class="node"><b>05</b></div><h3>Rider guidance</h3><p>Likely arrival, status, and a leave-by time.</p><p class="mono-sub">leave_by_min from POST /api/<wbr>simulate</p></li>
         </ol>
       </div>
     </section>

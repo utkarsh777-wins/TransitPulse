@@ -1,8 +1,8 @@
 # TransitPulse
 
-![TransitPulse home on a desktop. The top card is a scenario for bus PB08-BUS-101 at PAP Chowk on a weekday at 13:00, with leave-by, a 10th–90th arrival range, and presets for midday, morning rush, and severe congestion.](docs/images/transitpulse-home.png)
+![TransitPulse home on a desktop. The top card is a scenario for bus PB08-BUS-101 at PAP Chowk on a weekday at 13:00, with leave-by, a likely arrival, and presets for midday, morning rush, and severe congestion.](docs/images/transitpulse-home.png)
 
-Honest arrival windows for Punjab's tier-2 and intercity buses. TransitPulse predicts delay on one corridor, NH-44 from Jalandhar to Phagwara, and shows the likely arrival as a range plus a leave-by time. The training table is synthetic GPS from `notebooks/01_phase1_data_pipeline.ipynb` (NumPy seed 42). Held-out scores describe that table. They are not real-world accuracy.
+Honest arrival windows for Punjab's tier-2 and intercity buses. TransitPulse predicts delay on one corridor, NH-44 from Jalandhar to Phagwara, and shows a likely arrival plus a leave-by time. That range is this stop's 10th–90th delay band shifted by earlier stops' estimated delays, not a calibrated cumulative interval. The training table is synthetic GPS from `notebooks/01_phase1_data_pipeline.ipynb` (NumPy seed 42). Held-out scores describe that table. They are not real-world accuracy.
 
 The service is FastAPI (`src/app.py`). It serves the site in `web/` and the JSON API. Models in `models/` are loaded at startup and are not retrained on boot.
 
@@ -10,7 +10,7 @@ The service is FastAPI (`src/app.py`). It serves the site in `web/` and the JSON
 
 | Path | What it shows |
 | --- | --- |
-| `/` | Rider card first: selected bus, stop, clock, weather, late/urgent status, leave-by, and the 10th–90th arrival range. Presets are Midday clear, Morning rush and rain, and Severe congestion. The drawing and corridor facts stay below that card |
+| `/` | Rider card first: selected bus, stop, clock, weather, late/urgent status, leave-by, and a likely arrival. Presets are Midday clear, Morning rush and rain, and Severe congestion. The drawing and corridor facts stay below that card |
 | `/how-it-works` | Five steps from a GPS ping to rider guidance, with an explorer for fields, cleaning, features, the interval formula, and status rules |
 | `/demo` | Same scenario model, with sliders for hour, weather, upstream lag, speed, dwell, and walk (0–30 min). `?view=evaluator` opens the diagnostics tab. The page can download the current scenario or the evidence table as CSV, and print the evaluator brief. If `/api/*` cannot be reached, the page uses a labelled in-browser stand-in |
 | `/model` | Held-out metrics, feature importance, validation design, caveats, and the hashed artifact inventory |

@@ -299,11 +299,10 @@ function getSelectedSegment() {
 function getSegmentById(id) { return state.result?.segments.find((s) => s.segment_id === id) || null; }
 
 /* ---------------------------------------------------------------- the ETA story
-   Arrives-in is the cumulative estimated_arrival_offset_min from the trip start.
-   The range is that same clock: earlier hops keep their point delay, and this hop
-   uses its 10th–90th delay band. Leave-by is the API value, which uses the same arrival. */
+   Arrives-in is estimated_arrival_offset_min. "Scheduled" is scheduled_arrival_offset_min.
+   Hop time is this segment's scheduled_time_min. The likely band is not a calibrated cumulative interval. */
 function etaStory(segment) {
-  const sched = Number(segment.scheduled_time_min);
+  const hop = Number(segment.scheduled_time_min);
   const delay = Number(segment.predicted_delay_min);
   const view = arrivalView(segment);
   const scheduledArrival = Number(segment.scheduled_arrival_offset_min);
@@ -313,7 +312,7 @@ function etaStory(segment) {
   else if (delay < 0) phrase = `${Math.abs(delay).toFixed(1)} min early`;
   else phrase = `${delay.toFixed(1)} min late`;
   return {
-    sched, scheduledArrival, delay, eta: view.eta, lo: view.lo, hi: view.hi, low, phrase,
+    hop, scheduledArrival, delay, eta: view.eta, lo: view.lo, hi: view.hi, low, phrase,
     flap: low ? `${Math.floor(view.lo)}–${Math.ceil(view.hi)}` : minutes1(view.eta).toFixed(1),
   };
 }
@@ -376,12 +375,13 @@ function renderRiderCard() {
   setFlap(dom.etaValue, story.flap);
   dom.etaStatus.className = `status-chip ${cls}`;
   dom.etaStatus.textContent = statusText(segment.delay_status);
-  dom.etaMeta.innerHTML = `<b>${signed(story.delay)} min</b> vs schedule · scheduled <b>${story.sched.toFixed(1)}</b> min`;
+  dom.etaMeta.innerHTML = `<b>${signed(story.delay)} min</b> vs schedule · scheduled <b>${minutes1(story.scheduledArrival).toFixed(1)}</b> min · hop time <b>${minutes1(story.hop).toFixed(1)}</b> min`;
 
   dom.etaRange.hidden = false;
   {
     const max = Math.max(Math.ceil(story.hi / 5) * 5, 10);
     dom.etaRangeValue.textContent = `${minutes1(story.lo).toFixed(1)}–${minutes1(story.hi).toFixed(1)} min`;
+    dom.etaRangeValue.title = "This stop's 10th–90th delay band, shifted by earlier stops' estimated delays. Not a calibrated cumulative interval.";
     dom.rangeBar.style.left = `${(story.lo / max) * 100}%`;
     dom.rangeBar.style.width = `${((story.hi - story.lo) / max) * 100}%`;
     dom.rangeBar.style.background = `var(--${cls === "ontime" ? "moderate" : cls})`;
@@ -439,12 +439,12 @@ function renderSegmentList() {
     const band = `${minutes1(story.lo).toFixed(1)}–${minutes1(story.hi).toFixed(1)}`;
     return `<button class="seg-row seg-item${sel}" data-segment-id="${s.segment_id}" type="button" aria-pressed="${sel ? "true" : "false"}">
         <span class="seg-id">${id}</span>
-        <span class="seg-name"><strong data-id="${id}">${escapeHtml(shortName(s.start_stop))} → ${escapeHtml(shortName(s.end_stop))}</strong><small>${Number(s.distance_km).toFixed(1)} km</small></span>
-        <span class="seg-num">${Number(s.scheduled_time_min).toFixed(1)}</span>
+        <span class="seg-name"><strong data-id="${id}">${escapeHtml(shortName(s.start_stop))} → ${escapeHtml(shortName(s.end_stop))}</strong><small>${Number(s.distance_km).toFixed(1)} km · hop time ${minutes1(story.hop).toFixed(1)} min</small></span>
+        <span class="seg-num">${minutes1(story.scheduledArrival).toFixed(1)}</span>
         <span class="seg-num is-strong">${etaText}</span>
         <span class="seg-num seg-delay ${dcls}">${signed(d)}</span>
         <span class="seg-window">${band}</span>
-        <span class="seg-nums"><span>Sched <b>${Number(s.scheduled_time_min).toFixed(1)}</b></span><span>ETA <b>${etaText}</b> min</span><span>Delay <b class="seg-delay ${dcls}">${signed(d)}</b></span><span>10th–90th <b>${band}</b></span></span>
+        <span class="seg-nums"><span>Scheduled <b>${minutes1(story.scheduledArrival).toFixed(1)}</b></span><span>Hop time <b>${minutes1(story.hop).toFixed(1)}</b></span><span>ETA <b>${etaText}</b> min</span><span>Delay <b class="seg-delay ${dcls}">${signed(d)}</b></span><span>Likely <b>${band}</b></span></span>
         <span class="seg-badge"><span class="status-chip ${cls}">${statusText(s.delay_status)}</span></span>
         <span class="seg-conf"><span>${Number(s.leave_by_min).toFixed(1)} min</span></span>
       </button>`;
@@ -1010,7 +1010,7 @@ function downloadScenarioCsv() {
   if (!state.result) return;
   const sim = state.result.simulation || {};
   const rows = [["field", "value"], ["provenance", "POST /api/simulate for this scenario. Not a live GPS feed."], ["hour_of_day", sim.hour_of_day], ["weather_severity", sim.weather_severity], ["upstream_lag_min", sim.rolling_3trip_delay_min], ["walk_min", sim.walk_time_min], ["gps_speed_kmh", sim.gps_speed_kmh]];
-  rows.push(["segment", "from", "to", "scheduled_arrival_min", "arrives_in_min", "delay_min", "range_low_min", "range_high_min", "leave_by_min", "status"]);
+  rows.push(["segment", "from", "to", "scheduled_arrival_min", "arrives_in_min", "delay_min", "shifted_band_low_min", "shifted_band_high_min", "leave_by_min", "status"]);
   state.result.segments.forEach((segment) => {
     const view = arrivalView(segment);
     rows.push([
