@@ -80,14 +80,21 @@ def test_health_and_simulate_use_frozen_models() -> None:
 
         page = client.get("/")
         assert page.status_code == 200
-        assert "Arrival windows" in page.text
+        assert "Not a live GPS feed" in page.text
+        assert "Evaluator evidence" in page.text
+        assert "Arrival windows" not in page.text
 
         demo = client.get("/demo")
         assert demo.status_code == 200
         assert 'id="map"' in demo.text
         assert "PROTOTYPE ONLY" not in demo.text
         assert 'id="walk-slider"' in demo.text
-        assert 'id="eta-leave"' in demo.text
+        assert 'id="recommendation"' in demo.text
+        assert 'id="eta-leave"' not in demo.text
+        assert "Why this stop is late" not in demo.text
+        assert "Live status" not in demo.text
+        assert "Morning rush and rain" in demo.text
+        assert "Midday Clear" not in demo.text
 
         for path, needle in (
             ("/how-it-works", "From a GPS ping"),
@@ -243,6 +250,7 @@ def test_pages_do_not_ship_placeholders() -> None:
     assert "Team member name" not in about
     assert "Utkarsh Kumar" in about
     assert "github.com/utkarsh777-wins" in about
+    assert "ps-card" not in about
     assert "PROTOTYPE ONLY" not in demo
     assert "not in repo" not in model
     assert "not measured yet" not in model
@@ -369,7 +377,9 @@ console.log(JSON.stringify({ lo: view.lo, hi: view.hi, eta: view.eta, row: row.j
     assert "not a calibrated cumulative interval" in how
     assert "10th–90th percentile band" not in landing
     assert "percentile window" not in landing
-    assert "not a calibrated cumulative interval" in landing
+    assert "not a calibrated cumulative interval" not in landing
+    assert "walk_time_min: 8" not in home
+    assert home.count("walk_time_min: 5") >= 3
     assert "80% prediction interval" not in (ROOT / "src" / "app.py").read_text(encoding="utf-8")
     assert "10th–90th minute range" not in demo_html
     assert "not a calibrated cumulative interval" in demo_html.lower() or "Not a calibrated cumulative interval" in demo_html

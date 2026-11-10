@@ -10,7 +10,7 @@ The service is FastAPI (`src/app.py`). It serves the site in `web/` and the JSON
 
 | Path | What it shows |
 | --- | --- |
-| `/` | Rider card first: selected bus, stop, clock, weather, late/urgent status, leave-by, and a likely arrival. Presets are Midday clear, Morning rush and rain, and Severe congestion. The drawing and corridor facts stay below that card |
+| `/` | Rider card: selected bus, stop, status, leave-by, and a likely arrival. Presets are Midday clear, Morning rush and rain, and Severe congestion, with the same walk as `/demo`. Links under the presets open the corridor controls and the evaluator |
 | `/how-it-works` | Five steps from a GPS ping to rider guidance, with an explorer for fields, cleaning, features, the interval formula, and status rules |
 | `/demo` | Same scenario model, with sliders for hour, weather, upstream lag, speed, dwell, and walk (0–30 min). `?view=evaluator` opens the diagnostics tab. The page can download the current scenario or the evidence table as CSV, and print the evaluator brief. If `/api/*` cannot be reached, the page uses a labelled in-browser stand-in |
 | `/model` | Held-out metrics, feature importance, validation design, caveats, and the hashed artifact inventory |

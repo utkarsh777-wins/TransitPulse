@@ -51,16 +51,6 @@ body[data-app] .bus-anchor .bus-marker { inset: auto; position: relative; width:
 .sync-pill[data-state="error"] .sync-dot { background: var(--severe); }
 .sync-pill[data-state="offline"] { color: var(--fg-2); border-color: var(--line-strong); }
 .sync-pill[data-state="offline"] .sync-dot { background: var(--fg-3); animation: none; }
-@media (max-width: 639.98px) {
-  body[data-app] .sync-pill { width: auto; height: 28px; padding: 0 8px; gap: 4px; border: 1px solid var(--line); border-radius: var(--r-full); font-size: var(--t-xs); font-weight: 500; }
-  body[data-app] .sync-pill #sync-label { display: inline; position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  body[data-app] .sync-pill::after { content: "Live"; }
-  body[data-app] .sync-pill[data-state="busy"]::after { content: "Updating"; }
-  body[data-app] .sync-pill[data-state="standin"]::after { content: "Stand-in"; }
-  body[data-app] .sync-pill[data-state="error"]::after { content: "Error"; }
-  body[data-app] .sync-pill[data-state="offline"]::after { content: "Offline"; }
-  body[data-app] .sync-pill[data-state="standin"] { border-color: color-mix(in srgb, var(--moderate) 45%, var(--line)); }
-}
 
 /* ---- Stand-in banner: weight on the ramp (was 650) ---- */
 .standin-banner { padding: 8px var(--page-x); max-width: none; } /* PR #2 bug: theme-v2 caps every <p> at 68ch */
@@ -74,7 +64,7 @@ body[data-app] .bus-anchor .bus-marker { inset: auto; position: relative; width:
 /* KPI cells stack when a cell would be narrower than ~9 characters of its own text (200% text). */
 body[data-app] .kpis { grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5em), 1fr)); }
 @media (min-width: 480px) and (max-width: 899.98px) { body[data-app] .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (min-width: 900px) { body[data-app] .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } } /* r3: explicit 4-up (auto-fit + a spanning stale note made 8 tracks) */
+@media (min-width: 900px) { body[data-app] .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 body[data-app] .kpi, body[data-app] .kpi-value { min-width: 0; }
 body[data-app] .kpi-value { flex-wrap: wrap; }
 
@@ -158,7 +148,7 @@ html[data-demo="loading"] .demo-skeleton { opacity: 0; animation: sk-in 200ms ea
 .sk-card b, .sk-wide b { display: block; height: 14px; border-radius: var(--r-xs); background: var(--surface-3, var(--surface-2)); }
 .sk-card b.big { height: 56px; width: 50%; }
 .sk-card b.w60 { width: 60%; } .sk-card b.w80, .sk-wide b.w80 { width: 80%; } .sk-card b.w40, .sk-wide b.w40 { width: 40%; }
-@media (min-width: 640px) { .sk-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 640px) { .sk-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 1024px) { .sk-split { grid-template-columns: minmax(0, 1fr) minmax(320px, 400px); } .sk-map { height: 440px; } }
 @media (prefers-reduced-motion: no-preference) {
   .demo-skeleton b, .sk-map polyline { animation: tp-pulse 1.4s ease-in-out infinite; }
@@ -217,7 +207,7 @@ body[data-app] .area-segments { align-self: start; }
    numbers run with a smaller gap; the name gets the full width and the status badge moves to the
    confidence row, so long names no longer wrap beside it. The row stays one 44 px+ button. */
 @container (max-width: 520px) {
-  body[data-app] .seg-row.seg-item { row-gap: 4px; padding-block: 12px; grid-template-areas: "name name" "nums nums" "conf status"; align-items: center; }
+  body[data-app] .seg-row.seg-item { row-gap: 4px; padding-block: 12px; grid-template-areas: "name name" "nums nums" "status status"; align-items: center; }
   body[data-app] .seg-row.seg-item .seg-badge { align-self: center; }
   body[data-app] .seg-nums { gap: 4px 12px; }
   body[data-app] .seg-name small { line-height: 1.3; }
@@ -272,7 +262,7 @@ body[data-app] .seg-row.seg-item .seg-nums b { white-space: nowrap; }
 /* r4 · the window column fits "−0.7 to +0.6" at every width (it overhung by 8 px at 880–920); header and
    rows share the same em tracks. Compact rows: the "SEG 01" prefix may wrap before the name. */
 @container (min-width: 760.02px) {
-  body[data-app] .seg-row { grid-template-columns: 4.2em minmax(11em, 1.7fr) 4em 4em 4.4em minmax(8.6em, 1fr) 8.6em minmax(7em, .9fr); }
+  body[data-app] .seg-row { grid-template-columns: 4.2em minmax(11em, 1.7fr) 4em 4em 4.4em minmax(8.6em, 1fr) 8.6em; }
 }
 body[data-app] .seg-name strong::before { white-space: pre-wrap; }
 body[data-app] .xai-label { min-width: 0; overflow-wrap: break-word; }
