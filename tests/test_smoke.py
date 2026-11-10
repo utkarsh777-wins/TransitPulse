@@ -80,12 +80,21 @@ def test_health_and_simulate_use_frozen_models() -> None:
 
         page = client.get("/")
         assert page.status_code == 200
-        assert "Not a live GPS feed" in page.text
+        assert "Not a live GPS feed" not in page.text
+        assert "ops-note" not in page.text
+        assert "Honest arrival windows for Punjab" not in page.text
+        assert "not an official operator service" not in page.text
         assert "Evaluator evidence" in page.text
         assert "Arrival windows" not in page.text
 
         demo = client.get("/demo")
         assert demo.status_code == 200
+        assert "Not a live GPS feed" not in demo.text
+        assert "Scenario model" not in demo.text
+        assert "Honest arrival windows for Punjab" not in demo.text
+        assert "not an official operator service" in demo.text
+        assert "walk used for leave-by" in demo.text
+        assert "min walk used for leave-by" not in demo.text
         assert 'id="map"' in demo.text
         assert "PROTOTYPE ONLY" not in demo.text
         assert 'id="walk-slider"' in demo.text
@@ -104,6 +113,12 @@ def test_health_and_simulate_use_frozen_models() -> None:
             response = client.get(path)
             assert response.status_code == 200, path
             assert needle in response.text
+            assert "Honest arrival windows for Punjab" not in response.text
+
+        for path in ("/model", "/about"):
+            assert "not an official operator service" in client.get(path).text
+        for path in ("/how-it-works", "/not-on-this-route"):
+            assert "not an official operator service" not in client.get(path).text
 
         evidence = client.get("/api/evidence")
         assert evidence.status_code == 200
@@ -371,6 +386,11 @@ console.log(JSON.stringify({ lo: view.lo, hi: view.hi, eta: view.eta, row: row.j
     assert "story.scheduledArrival" in demo_js
     assert "hop time" in demo_js
     assert "Likely arrival" in home
+    assert "Leave in " not in home
+    assert "min walk used for leave-by" not in demo_js
+    assert "walk used for leave-by" in demo_js
+    assert "Scenario model · not a live GPS feed" not in demo_js
+    assert "Not a live GPS feed" not in demo_js
     how = (ROOT / "web" / "how-it-works.html").read_text(encoding="utf-8")
     landing = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
     assert "Riders get the 10th–90th range" not in how

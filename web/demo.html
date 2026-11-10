@@ -58,12 +58,10 @@
     </div>
   </header>
   <div class="demo-top" role="region" aria-label="Demo status and views">
-  <!-- Status slot: always in flow and always sized by the longest (stand-in) message, so switching
-       between pending / live / stand-in never moves the page (CLS). -->
+  <!-- Status slot: pending, stand-in, and error keep this bar. A connected rider view hides it. -->
   <p class="standin-banner" id="standin-banner" data-mode="pending" aria-live="polite">
     <span class="sb-standin"><strong>Stand-in fallback.</strong> The API is unreachable, so these numbers are an in-browser heuristic, not the trained model.</span>
     <span class="sb-alt sb-pending"><strong>Connecting to the model API…</strong> If it can't be reached, an in-browser heuristic will stand in for the trained model.</span>
-    <span class="sb-alt sb-live"><strong>Scenario model.</strong> Not a live GPS feed.</span>
     <span class="sb-alt sb-error"><strong>Corridor data unavailable.</strong> See the message below.</span>
   </p>
   <div class="topbar app-bar">
@@ -126,7 +124,7 @@
         <article class="kpi">
           <h2 class="label">Walk to the stop</h2>
           <p class="kpi-value"><span class="num" id="stat-confidence">--</span><span class="unit">min</span></p>
-          <p class="kpi-foot" id="stat-confidence-foot">min used in leave-by</p>
+          <p class="kpi-foot" id="stat-confidence-foot">walk used for leave-by</p>
         </article>
         <article class="kpi kpi-eta">
           <h2 class="label">Next stop ETA</h2>
@@ -350,6 +348,7 @@
           <span class="label">Rubric audit view</span>
           <h2>Evaluator evidence</h2>
           <p>Counts and scores below come from the committed model files. If a check was not run, it says not measured.</p>
+          <p>Prototype · trained on generated telemetry · not an official operator service.</p>
         </div>
         <div class="verdict" id="verification-summary">
           <span class="verdict-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span>
@@ -456,7 +455,6 @@
         <div class="foot-brand">
           <img class="on-light" src="assets/logo/lockup-light.svg" alt="TransitPulse" width="156" height="48">
           <img class="on-dark" src="assets/logo/lockup-dark.svg" alt="TransitPulse" width="156" height="48">
-          <p class="foot-note">Honest arrival windows for Punjab's tier-2 and intercity buses.</p>
         </div>
         <div><h2>Product</h2><ul>
           <li><a href="/how-it-works">How it works</a></li>
@@ -475,7 +473,7 @@
         </ul></div>
       </div>
       <div class="site-footer-bottom">
-        <span class="foot-mode" id="footer-mode">Scenario model · not a live GPS feed</span>
+        <span class="foot-mode" id="footer-mode" hidden></span>
         <span>NH-44 · Jalandhar → Phagwara · IST</span>
       </div>
     </div>

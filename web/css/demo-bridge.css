@@ -106,17 +106,14 @@ body[data-app] .xai-axis-labels { grid-template-columns: minmax(0, 1fr) minmax(0
 @media (min-width: 840px) { .kpi-status { font-size: var(--fs-24); } }
 #recenter-map, .icon-btn { padding: 0; }                /* UA 1px 6px button padding */
 
-/* Status slot (CLS fix): the stand-in sentence always reserves the height; other states overlay it. */
+/* Status slot: stand-in text reserves the height for pending and stand-in. Live hides the bar. */
 .standin-banner { position: relative; }
 .standin-banner .sb-alt { position: absolute; inset: 8px var(--page-x); display: none; align-items: center; }
 .standin-banner:not([data-mode="standin"]) .sb-standin { visibility: hidden; }
-.standin-banner[data-mode="pending"] .sb-pending,
-.standin-banner[data-mode="live"] .sb-live { display: flex; flex-wrap: wrap; gap: 0 .3em; }
+.standin-banner[data-mode="pending"] .sb-pending { display: flex; flex-wrap: wrap; gap: 0 .3em; }
 html[data-demo="error"] .standin-banner:not([data-mode="standin"]) .sb-alt { display: none; }
 html[data-demo="error"] .standin-banner:not([data-mode="standin"]) .sb-error { display: flex; flex-wrap: wrap; gap: 0 .3em; }
-.standin-banner .sb-live strong { color: var(--ok, var(--fg)); }
 .standin-banner:not([data-mode="standin"]) { background: var(--surface-2); }
-.standin-banner[data-mode="live"] .sb-live strong { color: var(--fg); }
 
 
 /* CLS: during the first ≤300 ms ("loading", set in <head>) the views are laid out but not painted, so
@@ -251,8 +248,11 @@ body[data-app] .leaflet-top .leaflet-control { margin-top: 12px; }
 body[data-app] .leaflet-left .leaflet-control { margin-left: 12px; }
 /* r4 · LCP: status lines are plain blocks (not flex), so each message paints as one text block; the pending
    line is worded to fill the same slot as the stand-in line, so the slot's first paint is its largest. */
-.standin-banner[data-mode="pending"] .sb-pending, .standin-banner[data-mode="live"] .sb-live,
+.standin-banner[data-mode="pending"] .sb-pending,
 html[data-demo="error"] .standin-banner:not([data-mode="standin"]) .sb-error { display: block; }
+/* Connected rider view has no status line. Errors still use this slot. */
+.standin-banner[data-mode="live"] { display: none; }
+html[data-demo="error"] .standin-banner[data-mode="live"] { display: block; }
 /* r4 · enlarged-text pass (Smith 200 % sweep): words break only at hyphenation points, chips never wrap,
    and the phone segment numbers form a 2 × 2 block instead of 3 + 1. */
 body[data-app] main :is(h2, h3, strong, .seg-name, .tel-route) { hyphens: auto; -webkit-hyphens: auto; hyphenate-limit-chars: 8 4 4; }
