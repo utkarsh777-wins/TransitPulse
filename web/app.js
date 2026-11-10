@@ -55,7 +55,13 @@ const PRESETS = {
   rush: { hour_of_day: 8, is_weekend: false, weather_severity: 1, rolling_3trip_delay_min: 6.5, prev_stop_dwell_sec: 85, gps_speed_kmh: 18 },
   evening: { hour_of_day: 18, is_weekend: false, weather_severity: 0, rolling_3trip_delay_min: 14, prev_stop_dwell_sec: 115, gps_speed_kmh: 10 },
 };
-const PRESET_LABELS = { midday: "Midday Clear", rush: "Morning Rush + Rain", evening: "Evening Gridlock" };
+const PRESET_LABELS = { midday: "Midday clear", rush: "Morning rush and rain", evening: "Severe congestion" };
+const DRIVER_NAMES = {
+  rolling_lag: "Earlier buses running late",
+  peak_hour: "Peak hour",
+  weather: "Weather",
+  dwell: "Time stopped at the last stop",
+};
 
 const startPreset = PRESETS[params.get("preset")] ? params.get("preset") : "midday";
 const state = {
@@ -295,7 +301,7 @@ function getSegmentById(id) { return state.result?.segments.find((s) => s.segmen
 /* ---------------------------------------------------------------- the ETA story
    One number everywhere: minutes until the bus reaches the end stop of the selected segment
    (estimated_segment_time_min). Early/late is a signed delta against the schedule — never a negative ETA.
-   When the model flags low confidence the ETA becomes the 80% window (schedule + quantile bounds). */
+   The arrival range is always the 10th–90th band (widened at peak), not a coverage promise. */
 function etaStory(segment) {
   const sched = Number(segment.scheduled_time_min);
   const delay = Number(segment.predicted_delay_min);
@@ -316,15 +322,14 @@ function etaStory(segment) {
 function recommendationFor(segment) {
   if (!segment || !state.result) return "Select a segment to inspect live rider guidance.";
   const weather = state.result.simulation.weather_severity;
-  if (segment.delay_status === "Severe Delay") return "Allow 15+ extra minutes or board the next service. The live arrival window is expanding.";
-  if (segment.delay_status === "Moderate Delay") {
-    if (weather > 0) return "Carry a weather buffer and watch the live window; wet-weather boarding is slowing this segment.";
-    if (segment.is_peak_hour) return "Prefer the next departure if connecting; peak demand is extending the arrival window.";
-    return "Running slightly behind schedule. The current arrival window is still usable.";
-  }
-  if (weather > 0) return "Bus is close to schedule. Keep a small weather buffer for the final approach.";
-  if (segment.is_peak_hour) return "Board now; the bus is tracking within the on-time band despite peak volumes.";
-  return "On-time service. No action needed; keep an eye on the live telemetry.";
+  const leave = Number(segment.leave_by_min);
+  const walk = Number(state.simulation.walk_time_min ?? 5);
+  const when = leave > 0.05 ? `Leave in ${leave.toFixed(1)} min` : "Leave now";
+  const walkBit = ` for a ${walk.toFixed(0)} min walk`;
+  if (segment.delay_status === "Severe Delay") return `${when}${walkBit}. This stop is running severely late.`;
+  if (segment.delay_status === "Moderate Delay") return `${when}${walkBit}. This stop is late.`;
+  if (segment.is_low_confidence || weather > 0) return `${when}${walkBit}. The arrival range is wide, so do not treat one minute as exact.`;
+  return `${when}${walkBit}. This stop is close to the schedule.`;
 }
 
 /* ---------------------------------------------------------------- renderers */
@@ -334,10 +339,8 @@ function renderStats() {
   const selected = getSelectedSegment();
   dom.statDelay.textContent = signed(corridor.total_predicted_delay_min);
   dom.statDelayFoot.innerHTML = `<b>${Number(corridor.estimated_trip_time_min).toFixed(1)}</b> min trip · ${Number(corridor.scheduled_time_min).toFixed(1)} scheduled`;
-  dom.statConfidence.textContent = Number(corridor.confidence_pct).toFixed(0);
-  dom.statConfidenceFoot.textContent = corridor.is_low_confidence
-    ? `${corridor.low_confidence_segments} low-confidence segment${corridor.low_confidence_segments === 1 ? "" : "s"}`
-    : "80% quantile envelope";
+  dom.statConfidence.textContent = Number(state.simulation.walk_time_min ?? 5).toFixed(0);
+  dom.statConfidenceFoot.textContent = "min walk used for leave-by";
   if (selected) {
     const story = etaStory(selected);
     setFlap(dom.statEta, story.flap);
@@ -347,7 +350,7 @@ function renderStats() {
   dom.statStatus.textContent = statusText(corridor.delay_status);
   dom.statStatus.style.color = `var(--${cls})`;
   dom.statStatusDot.style.background = `var(--${cls})`;
-  dom.statStatusFoot.textContent = `Classifier · ${corridor.low_confidence_segments} uncertainty trigger${corridor.low_confidence_segments === 1 ? "" : "s"}`;
+  dom.statStatusFoot.textContent = "From the delay on this trip, not a live feed";
 
   const counts = { "On-Time": 0, "Moderate Delay": 0, "Severe Delay": 0 };
   state.result.segments.forEach((s) => { counts[s.delay_status] += 1; });
@@ -368,16 +371,16 @@ function renderRiderCard() {
   dom.peakAlert.classList.toggle("is-critical", story.low && (confidence < 55 || segment.delay_status === "Severe Delay"));
   dom.etaTitle.textContent = segment.end_stop;
   dom.confidenceBadge.className = `badge ${badgeClass}`;
-  dom.confidenceBadge.textContent = `${confidence.toFixed(0)}% confidence`;
+  dom.confidenceBadge.textContent = statusText(segment.delay_status);
 
-  dom.etaKicker.textContent = story.low ? "Arrives within (80% window)" : "Arrives in";
+  dom.etaKicker.textContent = "Arrives in";
   setFlap(dom.etaValue, story.flap);
   dom.etaStatus.className = `status-chip ${cls}`;
   dom.etaStatus.textContent = statusText(segment.delay_status);
   dom.etaMeta.innerHTML = `<b>${signed(story.delay)} min</b> vs schedule · scheduled <b>${story.sched.toFixed(1)}</b> min`;
 
-  dom.etaRange.hidden = !story.low;
-  if (story.low) {
+  dom.etaRange.hidden = false;
+  {
     const max = Math.max(Math.ceil(story.hi / 5) * 5, 10);
     dom.etaRangeValue.textContent = `${story.lo.toFixed(1)}–${story.hi.toFixed(1)} min`;
     dom.rangeBar.style.left = `${(story.lo / max) * 100}%`;
@@ -389,7 +392,7 @@ function renderRiderCard() {
   }
   dom.recommendation.textContent = recommendationFor(segment);
   dom.etaSegmentName.textContent = routeName(segment.name);
-  dom.etaClassifier.textContent = `${statusText(segment.delay_status)} · ${Number(segment.status_probability_pct).toFixed(0)}%`;
+  dom.etaClassifier.textContent = statusText(segment.delay_status);
   dom.etaWindow.textContent = `${signed(segment.lower_bound_min)} to ${signed(segment.upper_bound_min)} min`;
   if (dom.etaLeave) {
     const leave = Number(segment.leave_by_min);
@@ -412,8 +415,9 @@ function renderXai() {
     const m = Number(d.minutes);
     const w = Math.abs(m) < 0.005 ? 0 : clamp((Math.abs(m) / maxMagnitude) * 100, 3, 100);
     const neg = m < 0;
+    const plain = DRIVER_NAMES[d.key] || d.label;
     return `<div class="xai-row" role="listitem">
-        <span class="xai-label">${escapeHtml(d.label)}</span>
+        <span class="xai-label">${escapeHtml(plain)}</span>
         <span class="xai-track" aria-hidden="true"><span class="neg"><i style="width:${neg ? w : 0}%"></i></span><span class="pos"><i style="width:${neg ? 0 : w}%"></i></span></span>
         <span class="xai-value${neg ? " is-neg" : ""}">${signed(m)}m</span>
       </div>`;
@@ -439,9 +443,9 @@ function renderSegmentList() {
         <span class="seg-num is-strong">${etaText}</span>
         <span class="seg-num seg-delay ${dcls}">${signed(d)}</span>
         <span class="seg-window">${signed(s.lower_bound_min)} to ${signed(s.upper_bound_min)}</span>
-        <span class="seg-nums"><span>Sched <b>${Number(s.scheduled_time_min).toFixed(1)}</b></span><span>ETA <b>${etaText}</b> min</span><span>Delay <b class="seg-delay ${dcls}">${signed(d)}</b></span><span>80% <b>${signed(s.lower_bound_min)}…${signed(s.upper_bound_min)}</b></span></span>
+        <span class="seg-nums"><span>Sched <b>${Number(s.scheduled_time_min).toFixed(1)}</b></span><span>ETA <b>${etaText}</b> min</span><span>Delay <b class="seg-delay ${dcls}">${signed(d)}</b></span><span>10th–90th <b>${signed(s.lower_bound_min)}…${signed(s.upper_bound_min)}</b></span></span>
         <span class="seg-badge"><span class="status-chip ${cls}">${statusText(s.delay_status)}</span></span>
-        <span class="seg-conf"><span class="track"><i style="width:${clamp(s.confidence_pct, 4, 100)}%"></i></span><span>${Number(s.confidence_pct).toFixed(0)}%</span></span>
+        <span class="seg-conf"><span>${Number(s.leave_by_min).toFixed(1)} min</span></span>
       </button>`;
   }).join("");
 }
@@ -873,6 +877,12 @@ function bindEvents() {
   }));
   dom.presetButtons.forEach((b) => b.addEventListener("click", () => applyPreset(b.dataset.preset)));
   dom.playToggle.addEventListener("click", togglePlayback);
+  const exportScenario = document.getElementById("export-scenario");
+  if (exportScenario) exportScenario.addEventListener("click", downloadScenarioCsv);
+  const exportEvidence = document.getElementById("export-evidence");
+  if (exportEvidence) exportEvidence.addEventListener("click", downloadEvidenceCsv);
+  const printBrief = document.getElementById("print-brief");
+  if (printBrief) printBrief.addEventListener("click", () => { switchView("evaluator"); window.print(); });
   dom.recenterMap.addEventListener("click", fitCorridor);
   dom.segmentList.addEventListener("click", (e) => {
     const item = e.target.closest("[data-segment-id]");
@@ -906,7 +916,7 @@ function renderDiagnostics(data) {
     { label: "R² score", value: Number(metrics.reg_r2 ?? 0).toFixed(3), unit: "", note: "Held-out future window", cls: "" },
     { label: "Classifier accuracy", value: (Number(metrics.clf_accuracy ?? 0) * 100).toFixed(1), unit: "%", note: `Macro F1 ${(Number(metrics.clf_macro_f1 ?? 0) * 100).toFixed(1)}%`, cls: "is-good" },
     { label: "Data retention", value: Number(summary.retention_rate_pct ?? 0).toFixed(2), unit: "%", note: `${Number(summary.clean_records ?? 0).toLocaleString("en-US")} clean rows`, cls: "" },
-    { label: "Peak interval", value: Number(metadata.uncertainty?.peak_hour_interval_width ?? 0).toFixed(2), unit: "min", note: "80% quantile width", cls: "is-warn" },
+    { label: "Peak interval", value: Number(metadata.uncertainty?.peak_hour_interval_width ?? 0).toFixed(2), unit: "min", note: "10th–90th band, widened at peak", cls: "is-warn" },
   ];
   dom.metricGrid.innerHTML = cards.map((c) => `<article class="metric ${c.cls}">
       <h3 class="label">${escapeHtml(c.label)}</h3>
@@ -950,7 +960,7 @@ function renderDiagnostics(data) {
   dom.uncertaintyVisual.innerHTML = `
     <div class="hbar"><span class="hbar-label">Off-peak</span><span class="track"><i style="width:${clamp((off / Math.max(peak, 0.01)) * 100, 4, 100)}%"></i></span><span class="hbar-value">${off.toFixed(3)} min</span></div>
     <div class="hbar is-peak"><span class="hbar-label">Peak</span><span class="track"><i style="width:100%"></i></span><span class="hbar-value">${peak.toFixed(3)} min</span></div>`;
-  dom.uncertaintyNote.textContent = `Peak-hour prediction intervals are ${ratio.toFixed(1)}× wider than off-peak. The rider card switches to the 80% arrival window whenever confidence drops.`;
+  dom.uncertaintyNote.textContent = `Peak-hour 10th–90th bands are ${ratio.toFixed(1)}× wider than off-peak. Width is not the same as observed coverage.`;
 
   const plot = data.plots?.[0];
   if (plot) { dom.plotLink.href = plot.url; dom.diagnosticCaption.textContent = plot.caption; }
@@ -986,11 +996,75 @@ function renderDiagnostics(data) {
   ];
   dom.diagRuntime.innerHTML = items.map(([k, v]) => `<div><dt>${escapeHtml(k)}</dt><dd class="${v === "Passed" ? "is-pass" : ""}">${escapeHtml(v)}</dd></div>`).join("");
 }
+function csvCell(value) {
+  const text = String(value ?? "");
+  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+function downloadCsv(filename, rows) {
+  const body = rows.map((row) => row.map(csvCell).join(",")).join("\n");
+  const blob = new Blob([body], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+function downloadScenarioCsv() {
+  if (!state.result) return;
+  const sim = state.result.simulation || {};
+  const rows = [["field", "value"], ["provenance", "POST /api/simulate for this scenario. Not a live GPS feed."], ["hour_of_day", sim.hour_of_day], ["weather_severity", sim.weather_severity], ["upstream_lag_min", sim.rolling_3trip_delay_min], ["walk_min", sim.walk_time_min], ["gps_speed_kmh", sim.gps_speed_kmh]];
+  rows.push(["segment", "from", "to", "scheduled_min", "delay_min", "range_low_min", "range_high_min", "leave_by_min", "status"]);
+  state.result.segments.forEach((segment) => {
+    const sched = Number(segment.scheduled_time_min);
+    rows.push([
+      segment.segment_id,
+      segment.start_stop,
+      segment.end_stop,
+      sched.toFixed(1),
+      Number(segment.predicted_delay_min).toFixed(1),
+      Math.max(sched + Number(segment.lower_bound_min), 0).toFixed(1),
+      Math.max(sched + Number(segment.upper_bound_min), 0).toFixed(1),
+      Number(segment.leave_by_min).toFixed(1),
+      segment.delay_status,
+    ]);
+  });
+  downloadCsv("transitpulse-scenario.csv", rows);
+}
+function downloadEvidenceCsv() {
+  const line = document.getElementById("coverage-line");
+  const rows = [
+    ["item", "value", "source"],
+    ["note", line ? line.textContent : "unavailable", "/api/evidence"],
+    ["upstream_lag_ablation", "not measured", "not run"],
+  ];
+  (state.diagnostics?.artifacts || []).forEach((item) => {
+    rows.push([item.file, item.sha256, "models/ SHA-256 from the audit"]);
+  });
+  downloadCsv("transitpulse-evidence.csv", rows);
+}
+async function fillCoverageLine() {
+  const line = document.getElementById("coverage-line");
+  if (!line) return;
+  try {
+    const data = await api("/api/evidence");
+    const coverage = data.interval_coverage || {};
+    const metrics = (data.ablation && data.ablation.metrics) || {};
+    const pct = (value) => (Number(value) * 100).toFixed(1);
+    if (!coverage.overall && coverage.overall !== 0) {
+      line.textContent = "Observed coverage: unavailable. Upstream-lag ablation: not measured.";
+      return;
+    }
+    line.textContent = `Observed coverage on days ${coverage.test_days}: ${pct(coverage.overall)}% of ${coverage.n_test} rows (peak ${pct(coverage.peak)}%, off-peak ${pct(coverage.off_peak)}%). GPS-speed ablation MAE ${Number(metrics.reg_mae).toFixed(3)} min, R² ${Number(metrics.reg_r2).toFixed(3)}. Upstream-lag ablation: not measured.`;
+  } catch (error) {
+    line.textContent = "Observed coverage: unavailable. Upstream-lag ablation: not measured.";
+  }
+}
 async function loadDiagnostics() {
   try {
     const data = await api("/api/diagnostics");
     state.diagnostics = data;
     renderDiagnostics(data);
+    fillCoverageLine();
   } catch (error) {
     dom.evalBadge.textContent = "Diagnostics unavailable";
     dom.verdict.classList.add("is-bad");

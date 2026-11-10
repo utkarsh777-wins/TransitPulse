@@ -70,7 +70,7 @@
             <li class="rail-step" style="--rd:120ms"><div class="node"><b>02</b></div><h3>Data-quality gates</h3><p>Four gates drop or repair bad telemetry before training.</p><p class="mono-sub">4,800 → 4,695 rows</p></li>
             <li class="rail-step" style="--rd:240ms"><div class="node"><b>03</b></div><h3>Delay model</h3><p>A regressor predicts minutes of delay; a classifier cross-checks the status.</p><p class="mono-sub">Random<wbr>Forest × 2 · 12 features</p></li>
             <li class="rail-step" style="--rd:360ms"><div class="node"><b>04</b></div><h3>Calibrated window</h3><p>Quantile models give the 10th and 90th percentile; the window is centred on the point delay.</p><p class="mono-sub">Gradient<wbr>Boosting α 0.10 / 0.90</p></li>
-            <li class="rail-step is-out" style="--rd:480ms"><div class="node"><b>05</b></div><h3>Rider guidance</h3><p>Window, confidence, status, leave-by time and a plain-language reason.</p><p class="mono-sub">served by POST /api/<wbr>simulate</p></li>
+            <li class="rail-step is-out" style="--rd:480ms"><div class="node"><b>05</b></div><h3>Rider guidance</h3><p>10th–90th range, status, leave-by time, and a plain-language reason.</p><p class="mono-sub">served by POST /api/<wbr>simulate</p></li>
           </ol>
         </div>
       </div>
@@ -171,7 +171,7 @@ upper = <span class="k">round</span>(delay + half_spread, 1)</pre>
             <div class="ex-panel" role="tabpanel" id="p-guide" aria-labelledby="t-guide" tabindex="0" hidden>
               <div class="ex-copy">
                 <h3>Rider guidance</h3>
-                <p>Status comes straight from the point delay. Riders get the window, a confidence figure based on window width, and advice that never says "board now" when confidence is low or the bus is late.</p>
+                <p>Status comes straight from the point delay. Riders get the 10th–90th range and a leave-by time. A wide range is not a coverage percentage, and the advice does not say to board now when the bus is late.</p>
                 <dl><dt>Leave by <span class="src-tag" title="Leave-by = window start − walk time (default 5 min). Returned as leave_by_min by POST /api/simulate.">from /api/simulate</span></dt><dd>window start − walk time</dd><dt>Low confidence</dt><dd>peak hours, wide window</dd></dl>
                 <p class="small muted" style="margin-top:12px">Leave-by is the window start minus walk time. <code class="mono">POST /api/simulate</code> accepts <code class="mono">walk_<wbr>time_<wbr>min</code> (default 5) and returns <code class="mono">leave_<wbr>by_<wbr>min</code> on every segment. The live demo has a walk-time slider.</p>
               </div>

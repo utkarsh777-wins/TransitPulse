@@ -382,6 +382,30 @@ html[data-evidence="error"] [data-evidence] { color: var(--fg-3); font-style: no
 .contact-list a:hover { background: var(--surface-2); }
 .ps-card { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
 
+/* Rider strip: first screen. Neutral surface, semantic status only. */
+.ops { background: #f4f4f5; color: #18181b; border-bottom: 1px solid #d4d4d8; }
+.ops-note { margin: 0; max-width: 40rem; color: #3f3f46; font-size: 0.875rem; }
+.ops-top { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-top: 12px; }
+.ops-kicker { margin: 0; font-size: 0.75rem; letter-spacing: .04em; text-transform: uppercase; color: #52525b; }
+.ops-stop { margin: 4px 0 0; font-size: clamp(1.75rem, 1.2rem + 2vw, 2.5rem); letter-spacing: -0.03em; line-height: 1.05; }
+.ops-status { margin: 0; padding: 6px 10px; border-radius: 999px; font-weight: 600; font-size: 0.875rem; background: #e4e4e7; }
+.ops-status[data-status="ontime"] { background: #dcfce7; color: #166534; }
+.ops-status[data-status="moderate"] { background: #fef3c7; color: #92400e; }
+.ops-status[data-status="severe"] { background: #fee2e2; color: #991b1b; }
+.ops-leave { margin: 16px 0 0; font-size: 1.25rem; }
+.ops-leave strong { font-variant-numeric: tabular-nums; }
+.ops-range, .ops-action { margin: 8px 0 0; max-width: 40rem; color: #27272a; }
+.ops-drivers { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 16px 0 0; padding: 0; }
+.ops-drivers li { font-variant-numeric: tabular-nums; font-size: 0.875rem; color: #3f3f46; }
+.ops-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.ops-presets button { min-height: 44px; padding: 0 12px; border: 1px solid #d4d4d8; border-radius: 8px; background: #fff; color: #18181b; font: inherit; }
+.ops-presets button[aria-pressed="true"] { background: #18181b; color: #fafafa; }
+.ops-links { margin: 12px 0 0; font-size: 0.875rem; }
+.ops { padding-block: 20px 28px; }
+@media (max-width: 639.98px) {
+  .ops-top { flex-direction: column; }
+}
+
 /* 404 */
 .nf { padding-block: var(--fl-64-160); }
 .nf .flap { font-size: var(--fs-56); margin-top: 24px; }

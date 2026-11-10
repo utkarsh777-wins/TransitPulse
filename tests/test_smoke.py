@@ -163,6 +163,67 @@ def test_unknown_path_returns_the_not_found_page() -> None:
         assert 'href="/vendor/fonts/fonts.css"' in response.text
 
 
+def test_scenario_presets_change_the_delay() -> None:
+    midday = {
+        "hour_of_day": 13,
+        "is_weekend": False,
+        "weather_severity": 0,
+        "rolling_3trip_delay_min": 0.5,
+        "prev_stop_dwell_sec": 30,
+        "gps_speed_kmh": 34,
+        "walk_time_min": 5,
+    }
+    severe = {
+        "hour_of_day": 18,
+        "is_weekend": False,
+        "weather_severity": 0,
+        "rolling_3trip_delay_min": 14,
+        "prev_stop_dwell_sec": 115,
+        "gps_speed_kmh": 10,
+        "walk_time_min": 8,
+    }
+    with TestClient(app) as client:
+        calm = client.post("/api/simulate", json=midday)
+        crowded = client.post("/api/simulate", json=severe)
+        assert calm.status_code == 200
+        assert crowded.status_code == 200
+        calm_delay = calm.json()["corridor"]["total_predicted_delay_min"]
+        crowded_delay = crowded.json()["corridor"]["total_predicted_delay_min"]
+        assert crowded_delay > calm_delay
+        assert calm.json()["peak"]["is_peak_hour"] is False
+        assert crowded.json()["peak"]["is_peak_hour"] is True
+
+
+def test_evidence_hashes_match_committed_files() -> None:
+    import hashlib
+
+    with TestClient(app) as client:
+        body = client.get("/api/evidence").json()
+        matched = 0
+        for item in body["artifacts"]:
+            path = ROOT / "models" / item["file"]
+            if not path.is_file():
+                continue
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            assert digest == item["sha256"], item["file"]
+            matched += 1
+        assert matched >= 4
+        assert body["ablation"]["dropped_feature"] == "gps_speed_kmh"
+        assert body["metrics"]["reg_mae"] == 0.627
+        assert body["metrics"]["reg_r2"] == 0.945
+
+
+def test_rider_pages_do_not_treat_the_band_as_85_percent() -> None:
+    demo = (ROOT / "web" / "demo.html").read_text(encoding="utf-8")
+    home = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    assert "80% arrival window" not in demo
+    assert "85%" not in home
+    assert "not measured" in demo
+    assert "Severe congestion" in demo
+    assert 'id="ops"' in home
+    assert "These scores are not real-world accuracy" not in home
+
+
 def test_frontend_api_urls_are_relative() -> None:
     script = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
     assert "localhost" not in script

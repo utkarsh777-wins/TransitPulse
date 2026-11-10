@@ -1,6 +1,6 @@
 # TransitPulse
 
-![TransitPulse landing page on a desktop, showing the NH-44 Jalandhar to Phagwara arrival window for Haveli Corridor, the split-flap range, leave-by time, and corridor facts.](docs/images/transitpulse-home.png)
+![TransitPulse home on a desktop. The top card is a scenario for bus PB08-BUS-101 at PAP Chowk on a weekday at 13:00, with leave-by, a 10th–90th arrival range, and presets for midday, morning rush, and severe congestion.](docs/images/transitpulse-home.png)
 
 Honest arrival windows for Punjab's tier-2 and intercity buses. TransitPulse predicts delay on one corridor, NH-44 from Jalandhar to Phagwara, and shows the likely arrival as a range plus a leave-by time. The training table is synthetic GPS from `notebooks/01_phase1_data_pipeline.ipynb` (NumPy seed 42). Held-out scores describe that table. They are not real-world accuracy.
 
@@ -10,9 +10,9 @@ The service is FastAPI (`src/app.py`). It serves the site in `web/` and the JSON
 
 | Path | What it shows |
 | --- | --- |
-| `/` | Landing: the arrival-window idea, corridor facts, a short pipeline, and held-out evidence filled from `/api/evidence` |
+| `/` | Rider card first: selected bus, stop, clock, weather, late/urgent status, leave-by, and the 10th–90th arrival range. Presets are Midday clear, Morning rush and rain, and Severe congestion. The drawing and corridor facts stay below that card |
 | `/how-it-works` | Five steps from a GPS ping to rider guidance, with an explorer for fields, cleaning, features, the interval formula, and status rules |
-| `/demo` | Live corridor simulator. `?view=evaluator` opens the diagnostics tab. If `/api/*` cannot be reached, the page uses a labelled in-browser stand-in |
+| `/demo` | Same scenario model, with sliders for hour, weather, upstream lag, speed, dwell, and walk (0–30 min). `?view=evaluator` opens the diagnostics tab. The page can download the current scenario or the evidence table as CSV, and print the evaluator brief. If `/api/*` cannot be reached, the page uses a labelled in-browser stand-in |
 | `/model` | Held-out metrics, feature importance, validation design, caveats, and the hashed artifact inventory |
 | `/about` | Why the corridor matters, a roadmap, and the builder |
 
@@ -49,7 +49,7 @@ Held-out regressor metrics in `models/model_metadata.json`: MAE 0.627 min, RMSE 
 
 The published interval is centred on the point delay. Half-width is `max(0.6, (upper − lower) / 2)`, multiplied by 1.35 at peak, and the lower bound is floored at −1.0 minute. Mean raw interval width is 1.095 min off-peak and 3.491 min at peak. On the 945 test rows, 0.8698 of actual delays fall inside that published interval (0.8916 of 332 peak rows, 0.8581 of 613 off-peak rows).
 
-`src/ablation.py` retrains only the regressor with the same split and seed, dropping `gps_speed_kmh`. `models/ablation.json` records MAE 0.819 min and R² 0.903. The shipped regressor is not replaced.
+`src/ablation.py` retrains only the regressor with the same split and seed, dropping `gps_speed_kmh`. `models/ablation.json` records MAE 0.819 min and R² 0.903. The shipped regressor is not replaced. No ablation drops `rolling_3trip_delay_min`. That check is not measured, and the evaluator page says so. The 10th–90th band is not an 80% or 85% coverage guarantee. Observed coverage is the separate held-out figure above.
 
 Cleaning (`models/dq_audit_report.json`): 4,800 raw pings, 57 outside the corridor box, 48 outside 2–95 km/h, 48 dwell values imputed, 0 duplicate trip/segment rows, 4,695 clean rows (97.81% kept).
 
@@ -89,7 +89,7 @@ pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
-`tests/test_smoke.py` loads the frozen models and checks health, corridor, diagnostics, simulate (including leave-by and walk-time validation), evidence, the five pages, the HTML 404, and the JSON `/api` 404.
+`tests/test_smoke.py` loads the frozen models and checks health, corridor, diagnostics, simulate (including leave-by, walk-time validation, and that the severe-congestion inputs raise delay versus midday), evidence hashes against the files on disk, the five pages, the HTML 404, and the JSON `/api` 404.
 
 ## CSS bundles
 
