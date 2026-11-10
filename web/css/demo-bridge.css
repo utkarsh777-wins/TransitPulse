@@ -14,8 +14,8 @@
 }
 @media (min-width: 600px) { :root { --card-pad: 20px; --page-x: 24px; --gap: 16px; } }
 @media (min-width: 1200px) { :root { --card-pad: 24px; --page-x: 40px; --gap: 20px; } }
-[data-theme="light"], :root { --focus: #B83A0B; }
-[data-theme="dark"] { --focus: #FF7A45; }
+[data-theme="light"], :root { --focus: #111214; }
+[data-theme="dark"] { --focus: #EEEEF0; }
 
 body[data-app] .site-header { position: relative; border-bottom: 1px solid var(--line); }
 body[data-app] .site-header .wrap { max-width: none; padding-inline: var(--page-x); }
@@ -232,9 +232,10 @@ html[data-demo-stale] .status-dot { background: var(--fg-3) !important; }
 html[data-demo-stale] #stat-status, html[data-demo-stale] .kpi-status { color: var(--fg-2) !important; } /* app.js colours it inline */
 html[data-demo-stale] .route-line { stroke: var(--fg-3); }
 html[data-demo-stale] .bus-marker { background: var(--surface-2); color: var(--fg-2); }
-html[data-demo-stale] .window-band { background: var(--fg-3); }
+html[data-demo-stale] .window-band, html[data-demo-stale] .window-band.is-moderate, html[data-demo-stale] .window-band.is-severe { background: var(--fg-3); }
 html[data-demo-stale] [data-asof]::after { content: " · as of " attr(data-asof) " IST"; font-weight: 500; color: var(--fg-2); }
-html[data-demo-stale] #confidence-badge, html[data-demo-stale] .eta-card .badge { color: var(--fg-2) !important; background: var(--surface-2) !important; border-color: var(--line) !important; }
+html[data-demo-stale] .status-badge, html[data-demo-stale] .status-badge.ontime, html[data-demo-stale] .status-badge.moderate, html[data-demo-stale] .status-badge.severe { color: var(--fg-2) !important; background: var(--surface-2) !important; }
+html[data-demo-stale] .advice-callout, html[data-demo-stale] .advice-callout p, html[data-demo-stale] .advice-callout .leave-line { background: var(--surface-2); color: var(--fg-2); }
 body[data-app] .artifact-hash { white-space: nowrap; } /* r4: hashes never wrap mid-string */
 /* r4 · 4 px grid: em-based flap/unit insets snap to 4 px steps at every size; map dots centre with
    transforms (positioning, not spacing); Leaflet's 10 px control inset becomes 12. */

@@ -48,16 +48,32 @@
     $("ops-leave").textContent = leave > 0.05 ? "in " + leave.toFixed(1) + " min" : "now";
     var view = arrivalView(segment);
     var range = $("ops-range");
-    range.textContent = "Likely arrival " + minutes1(view.lo).toFixed(1) + "–" + minutes1(view.hi).toFixed(1) + " min";
+    range.textContent = minutes1(view.lo).toFixed(1) + "–" + minutes1(view.hi).toFixed(1) + " min";
+    var band = $("ops-band");
+    if (band) {
+      var max = Math.max(Math.ceil(view.hi / 5) * 5, 10);
+      var width = Math.max(0, view.hi - view.lo);
+      band.style.left = Math.min(100, (view.lo / max) * 100) + "%";
+      band.style.width = Math.min(100, (width / max) * 100) + "%";
+      band.className = "ops-band is-" + status.dataset.status;
+    }
     $("ops-action").textContent = action(segment, preset.walk_time_min);
     var list = $("ops-drivers");
     list.replaceChildren();
-    (segment.xai_drivers || []).forEach(function (d) {
+    var byKey = {};
+    (segment.xai_drivers || []).forEach(function (d) { byKey[d.key] = d; });
+    ["rolling_lag", "peak_hour", "weather", "dwell"].forEach(function (key) {
+      var d = byKey[key];
+      if (!d) return;
       var minutes = Number(d.minutes);
-      if (!(Number(minutes.toFixed(1)) > 0)) return;
+      var shown = Number(minutes.toFixed(1));
+      if (key === "dwell" && !(shown > 0)) return;
       var li = document.createElement("li");
-      var name = NAMES[d.key] || d.label;
-      li.textContent = name + ": +" + minutes.toFixed(1) + " min";
+      var name = document.createElement("span");
+      name.textContent = NAMES[key] || d.label;
+      var mins = document.createElement("b");
+      mins.textContent = (shown > 0 ? "+" : "") + shown.toFixed(1) + " min";
+      li.append(name, mins);
       list.appendChild(li);
     });
   }

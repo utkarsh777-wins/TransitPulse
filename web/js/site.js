@@ -226,12 +226,15 @@
   function applyEvidence(data) {
     var cov = data.interval_coverage || {};
     var metrics = (data.ablation && data.ablation.metrics) || {};
+    var lag = (data.ablation && data.ablation.lag_ablation && data.ablation.lag_ablation.metrics) || {};
     var map = {
       "coverage-overall": fmtPct(cov.overall),
       "coverage-peak": fmtPct(cov.peak),
       "coverage-offpeak": fmtPct(cov.off_peak),
       "ablation-mae": fmtNum(metrics.reg_mae, 1),
-      "ablation-r2": fmtNum(metrics.reg_r2, 2)
+      "ablation-r2": fmtNum(metrics.reg_r2, 2),
+      "lag-ablation-mae": fmtNum(lag.reg_mae, 1),
+      "lag-ablation-r2": fmtNum(lag.reg_r2, 2)
     };
     slots.forEach(function (el) {
       var key = el.getAttribute("data-evidence");

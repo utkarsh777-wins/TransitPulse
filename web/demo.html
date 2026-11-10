@@ -16,6 +16,9 @@
       var t = q === "light" || q === "dark" ? q : saved === "light" || saved === "dark" ? saved
         : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
       document.documentElement.dataset.theme = t;
+      if (new URLSearchParams(location.search).get("view") === "evaluator") {
+        document.title = "NH-44 evaluator audit · TransitPulse";
+      }
       /* Page state starts at "loading" before first paint, so the first render never shows empty cards (CLS). */
       document.documentElement.dataset.demo = "loading";
     })();
@@ -38,10 +41,10 @@
       </a>
       <nav class="site-nav" id="site-nav" aria-label="Main">
         <a href="/how-it-works">How it works</a>
-        <a href="/demo" aria-current="page">Live demo</a>
+        <a href="/demo" aria-current="page">Rider view</a>
         <a href="/model">Model &amp; evaluation</a>
         <a href="/about">About &amp; roadmap</a>
-        <a class="btn btn-primary site-nav-cta" href="/demo">Open live demo</a>
+        <a class="btn btn-primary site-nav-cta" href="/demo">Open the rider view</a>
       </nav>
       <div class="site-actions">
         <a class="btn btn-ghost gh" href="https://github.com/utkarsh777-wins/TransitPulse" rel="noreferrer">GitHub</a>
@@ -83,9 +86,9 @@
       </nav>
 
       <div class="topbar-meta">
-        <div class="clock" role="group" aria-label="Local time, IST">
-          <span class="clock-label">IST</span>
-          <time id="live-clock">--:--:--</time>
+        <div class="clock" role="group" aria-label="Selected scenario time">
+          <span class="clock-label">Scenario</span>
+          <time id="scenario-clock" datetime="13:00">13:00 IST</time>
         </div>
         
       </div>
@@ -115,7 +118,7 @@
     </div>
     <!-- ============================================================ LIVE -->
     <section class="view view-live" id="view-live" role="tabpanel" aria-labelledby="tab-live">
-      <div class="kpis area-kpis" aria-label="Corridor summary">
+      <div class="kpis area-kpis" role="region" aria-label="Corridor summary">
         <article class="kpi">
           <h2 class="label">Corridor delay</h2>
           <p class="kpi-value"><span class="num" id="stat-delay">--</span><span class="unit">min</span></p>
@@ -188,7 +191,7 @@
               <span class="label">Rider ETA · next stop</span>
               <h2 id="eta-title">PAP Chowk</h2>
             </div>
-            <span class="badge" id="confidence-badge">Confidence --</span>
+            <p class="status-badge" id="eta-status" data-status="pending">Checking</p>
           </header>
 
           <div class="eta-hero">
@@ -197,7 +200,6 @@
               <span class="flap flap-lg" id="eta-value" aria-hidden="true">--</span><span class="sr-only" id="eta-value-sr">not loaded</span><span class="unit">min</span>
             </div>
             <div class="eta-delta">
-              <span class="status-chip" id="eta-status">--</span>
               <span class="eta-delta-text" id="eta-meta">Scheduled -- min</span>
             </div>
           </div>
@@ -214,10 +216,12 @@
             <div class="window-scale"><span>0 min</span><span id="range-max">--</span></div>
           </div>
 
-          <div class="advice">
-            <span class="label">Rider recommendation</span>
+          <div class="advice advice-callout">
+            <span class="label">Leave by</span>
+            <p class="leave-line" id="leave-line">—</p>
             <p id="recommendation">Select a stop.</p>
           </div>
+          <ul class="driver-badges" id="driver-badges" aria-label="Why this stop"></ul>
 
           <dl class="facts">
             <div><dt>Segment</dt><dd id="eta-segment-name">--</dd></div>
@@ -365,7 +369,9 @@
           <li>Rider numbers come from <code>POST /api/simulate</code> for this corridor only.</li>
           <li>Compared with a neutral trip <strong class="mono" id="xai-baseline">--</strong>. Each bar is extra minutes from that one change. Not a proof that nothing else leaks into the model.</li>
           <li>Removing GPS speed and retraining is measured. The MAE and R² are filled from <code>/api/evidence</code>.</li>
-          <li>Upstream lag (<code>rolling_3trip_delay_min</code>) is the largest feature and can carry information about the delay itself. An ablation that removes it is <strong>not measured</strong>. This page does not claim zero leakage.</li>
+          <li>Upstream lag (<code>rolling_3trip_delay_min</code>) is the largest feature and can carry information about the delay itself. Removing it and retraining was measured on the same days 1–24 / 25–30 split, seed 42. The MAE and R² are filled from <code>/api/evidence</code>. This page does not claim zero leakage.</li>
+          <li>The training rows are generated telemetry from notebook 01, seed 42. Days 25–30 are synthetic held-out days, not a service record.</li>
+          <li>Not tested: GPS dropouts, breakdowns, festival or holiday traffic, and a real weather feed. Weather in the rider view is a severity input, not a live forecast.</li>
           <li>Likely arrival is this stop's 10th–90th delay band, shifted by earlier stops' estimated delays. It is not a calibrated cumulative interval, and it is not an 80% or 85% guarantee. Observed coverage on synthetic days 25–30 is a separate number.</li>
         </ul>
         <p id="coverage-line">Observed coverage: loading from the committed metadata.</p>
@@ -458,7 +464,7 @@
         </div>
         <div><h2>Product</h2><ul>
           <li><a href="/how-it-works">How it works</a></li>
-          <li><a href="/demo">Live demo</a></li>
+          <li><a href="/demo">Rider view</a></li>
           <li><a href="/demo?view=evaluator">Evaluator view</a></li>
         </ul></div>
         <div><h2>Evidence</h2><ul>
