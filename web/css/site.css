@@ -381,7 +381,6 @@ html[data-evidence="error"] [data-evidence] { color: var(--fg-3); font-style: no
 .contact-list span:first-child { font: 500 var(--fs-12)/1.3 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--fg-2); }
 .contact-list a:hover { background: var(--surface-2); }
 .ps-card { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
-.ps-id { font: 500 var(--d-2)/1 var(--font-mono); letter-spacing: -.03em; }
 
 /* 404 */
 .nf { padding-block: var(--fl-64-160); }
@@ -531,7 +530,7 @@ main { container: tp-main / inline-size; }
    figures. !important because `font:` shorthands on these elements reset font-variant. */
 main *:not(p, li, h1, h2, h3, h4, h5, h6, blockquote, figcaption, a, label, p *, li *, h1 *, h2 *, h3 *, h4 *, blockquote *, figcaption *) { font-variant-numeric: tabular-nums !important; }
 main :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, figcaption, a, label) { font-variant-numeric: normal !important; }
-main :is(.mono, .num, .pct, .sha, .flap, .flap *, .node, .val, .mono-sub, .kpi-foot, .ps-id, .card-label, .fig-no, .chip, .v, .k, td, th, b, strong, time, output, code, [data-evidence]) { font-variant-numeric: tabular-nums !important; }
+main :is(.mono, .num, .pct, .sha, .flap, .flap *, .node, .val, .mono-sub, .kpi-foot, .card-label, .fig-no, .chip, .v, .k, td, th, b, strong, time, output, code, [data-evidence]) { font-variant-numeric: tabular-nums !important; }
 /* Long body copy ≤ 75 cpl. */
 .caveat p, .caveats li p, .ps-card p, .card .body-2, .card > p, .ps-card .body-2 { max-width: 34em; } /* ≈ 68 cpl at 16 px (65ch measured 81 cpl in Geist) */
 /* Frame title pill: one line; short label under 480. */
