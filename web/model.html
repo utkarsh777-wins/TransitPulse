@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#F3F1EC" id="meta-theme-color">
+  <title>Model & evaluation · TransitPulse</title>
+  <meta name="description" content="Held-out metrics, feature importance and honest caveats for the TransitPulse delay model.">
+  <script>
+    (function () {
+      var q = new URLSearchParams(location.search).get("theme"), s = null;
+      try { s = localStorage.getItem("tp-theme"); } catch (e) {}
+      var t = q === "light" || q === "dark" ? q : s === "light" || s === "dark" ? s
+        : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.dataset.theme = t;
+    })();
+  </script>
+  <link rel="icon" href="assets/logo/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/logo/app-icon.svg">
+  <link rel="preload" href="vendor/fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="vendor/fonts/geist-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/site.bundle.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap site-header-inner">
+      <a class="site-brand" href="/" aria-label="TransitPulse home">
+        <img class="on-light" src="assets/logo/lockup-light.svg" alt="TransitPulse" width="170" height="52">
+        <img class="on-dark" src="assets/logo/lockup-dark.svg" alt="TransitPulse" width="170" height="52">
+      </a>
+      <nav class="site-nav" id="site-nav" aria-label="Main">
+        <a href="/how-it-works">How it works</a>
+        <a href="/demo">Live demo</a>
+        <a href="/model" aria-current="page">Model &amp; evaluation</a>
+        <a href="/about">About &amp; roadmap</a>
+        <a class="btn btn-primary site-nav-cta" href="/demo">Open live demo</a>
+      </nav>
+      <div class="site-actions">
+        <a class="btn btn-ghost gh" href="https://github.com/utkarsh777-wins/TransitPulse" rel="noreferrer">GitHub</a>
+        <button class="site-icon-btn theme-toggle" id="theme-toggle" type="button" aria-label="Switch theme" title="Switch theme">
+          <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
+        </button>
+        <a class="btn btn-primary site-cta" href="/demo">Live demo <span class="arrow" aria-hidden="true">→</span></a>
+        <button class="site-icon-btn site-menu-btn" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu">
+          <svg class="i-menu" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          <svg class="i-close" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+  <main id="main">
+    <section class="page-hero">
+      <div class="wrap">
+        <span class="eyebrow" data-reveal>Model &amp; evaluation</span>
+        <h1 class="h-1" data-reveal style="--rd:60ms">What the model gets right, and what we can't claim yet.</h1>
+        <p class="lead" data-reveal style="--rd:120ms">Held-out scores below are for synthetic GPS from notebook 01, seed 42. They describe that generated table. They are not real-world accuracy. Coverage and the GPS-speed ablation are read from <code class="mono">/api/evidence</code>.</p>
+      </div>
+    </section>
+
+    <section class="section tight" style="padding-top:0">
+      <div class="wrap">
+        <div class="kpi-grid" data-reveal>
+          <div class="kpi-cell"><p class="k">MAE</p><p class="v">0.627<small>min</small></p><p>Held-out days 25–30</p></div>
+          <div class="kpi-cell"><p class="k">RMSE</p><p class="v">0.914<small>min</small></p><p>Held-out days 25–30</p></div>
+          <div class="kpi-cell"><p class="k">R²</p><p class="v">0.945</p><p>Delay regressor</p></div>
+          <div class="kpi-cell"><p class="k">Baseline MAE</p><p class="v">3.498<small>min</small></p><p>Historical segment average</p></div>
+          <div class="kpi-cell"><p class="k">Error reduction</p><p class="v">82.07<small>%</small></p><p>vs the baseline</p></div>
+          <div class="kpi-cell"><p class="k">Classifier accuracy</p><p class="v">89.1<small>%</small></p><p>Macro F1 89.3% · 945 test rows</p></div>
+          <div class="kpi-cell"><p class="k">Mean CV MAE</p><p class="v">0.711<small>min</small></p><p>5-fold TimeSeriesSplit, days 1–24</p></div>
+          <div class="kpi-cell"><p class="k">Window coverage</p><p class="v"><span data-evidence="coverage-overall">…</span></p><p>Held-out days 25–30 inside the published interval. Peak <span class="mono" data-evidence="coverage-peak">…</span>, off-peak <span class="mono" data-evidence="coverage-offpeak">…</span>.</p><span class="src">from /api/evidence</span></div>
+        </div>
+        <p class="ev-retry" role="status"><span>Coverage and ablation figures couldn’t load from /api/evidence.</span><button type="button" data-ev-retry>Retry</button></p>
+      </div>
+    </section>
+
+    <section class="section" id="importance">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">Feature importance</span>
+          <h2 class="h-1" data-reveal>Mostly: is the bus ahead already late?</h2>
+          <p class="lead" data-reveal style="--rd:80ms">The lag of the last three trips carries 60% of the regressor's importance, and peak hour adds 23%. That makes sense for a corridor, but it is also the feature to watch for leakage.</p>
+        </div>
+        <div class="card">
+          <div class="fi">
+            <div class="fi-row top" style="--rd:0ms"><code>rolling_<wbr>3trip_<wbr>delay_<wbr>min</code><span class="track"><i style="width:100%"></i></span><span class="pct">60.35%</span></div>
+            <div class="fi-row" style="--rd:40ms"><code>is_<wbr>peak_<wbr>hour</code><span class="track"><i style="width:38.7%"></i></span><span class="pct">23.35%</span></div>
+            <div class="fi-row" style="--rd:80ms"><code>weather_<wbr>severity</code><span class="track"><i style="width:10.04%"></i></span><span class="pct">6.06%</span></div>
+            <div class="fi-row" style="--rd:120ms"><code>segment_<wbr>id</code><span class="track"><i style="width:6.43%"></i></span><span class="pct">3.88%</span></div>
+            <div class="fi-row" style="--rd:160ms"><code>gps_<wbr>speed_<wbr>kmh</code><span class="track"><i style="width:6.08%"></i></span><span class="pct">3.67%</span></div>
+            <div class="fi-row" style="--rd:200ms"><code>prev_<wbr>stop_<wbr>dwell_<wbr>sec</code><span class="track"><i style="width:1.94%"></i></span><span class="pct">1.17%</span></div>
+            <div class="fi-row" style="--rd:240ms"><code>hour_<wbr>of_<wbr>day</code><span class="track"><i style="width:0.62%"></i></span><span class="pct">0.37%</span></div>
+            <div class="fi-row" style="--rd:280ms"><code>day_<wbr>of_<wbr>week</code><span class="track"><i style="width:0.58%"></i></span><span class="pct">0.35%</span></div>
+            <div class="fi-row" style="--rd:320ms"><code>segment_<wbr>distance_<wbr>km</code><span class="track"><i style="width:0.42%"></i></span><span class="pct">0.25%</span></div>
+            <div class="fi-row" style="--rd:360ms"><code>historical_<wbr>segment_<wbr>avg_<wbr>min</code><span class="track"><i style="width:0.41%"></i></span><span class="pct">0.25%</span></div>
+            <div class="fi-row" style="--rd:400ms"><code>scheduled_<wbr>time_<wbr>min</code><span class="track"><i style="width:0.4%"></i></span><span class="pct">0.24%</span></div>
+            <div class="fi-row" style="--rd:440ms"><code>is_<wbr>weekend</code><span class="track"><i style="width:0.08%"></i></span><span class="pct">0.05%</span></div>
+          </div>
+          <p class="small muted" style="margin-top:16px">Impurity-based importance from the random-forest regressor. Bars are scaled to the top feature.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section band">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">Validation design</span>
+          <h2 class="h-1" data-reveal>Tested on days the model never saw.</h2>
+          <p class="lead" data-reveal style="--rd:80ms">No random shuffling. The split respects time, so the test window sits entirely in the future of the training data.</p>
+        </div>
+        <div class="grid-2">
+          <div class="card" data-reveal>
+            <p class="card-label">30-day split</p>
+            <div class="split-bar" style="margin-top:16px"><span class="tr">Train · days 1–24</span><span class="te">Test · 25–30</span></div>
+            <p class="card-label" style="margin-top:24px">TimeSeriesSplit · fold MAE (min)</p>
+            <div class="folds">
+              <div><b>0.788</b><span>Fold 1</span></div><div><b>0.677</b><span>Fold 2</span></div><div><b>0.807</b><span>Fold 3</span></div><div><b>0.644</b><span>Fold 4</span></div><div><b>0.640</b><span>Fold 5</span></div>
+            </div>
+          </div>
+          <div class="card" data-reveal style="--rd:80ms">
+            <p class="card-label">Classifier · test set</p>
+            <div class="table-wrap" style="margin-top:12px" role="region" tabindex="0" aria-label="Classifier scores by class, scrollable"><table class="table">
+              <thead><tr><th>Class</th><th class="num">Precision</th><th class="num">Recall</th><th class="num">F1</th><th class="num">Rows</th></tr></thead>
+              <tbody>
+                <tr><td><span class="chip ontime"><span class="dot"></span>On-time</span></td><td class="num">0.93</td><td class="num">0.89</td><td class="num">0.91</td><td class="num">280</td></tr>
+                <tr><td><span class="chip moderate"><span class="dot"></span>Moderate</span></td><td class="num">0.86</td><td class="num">0.85</td><td class="num">0.86</td><td class="num">358</td></tr>
+                <tr><td><span class="chip severe"><span class="dot"></span>Severe</span></td><td class="num">0.90</td><td class="num">0.93</td><td class="num">0.92</td><td class="num">307</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="caveats">
+      <div class="wrap split-sticky">
+        <div class="sticky-col">
+          <span class="eyebrow">Honest caveats</span>
+          <h2 class="h-1" data-reveal>Read before you quote a number.</h2>
+          <p class="lead" data-reveal style="--rd:80ms">These limits are part of the result. They also set the roadmap: each one has a matching next step.</p>
+        </div>
+        <div class="caveats is-list">
+          <article class="caveat" data-reveal><span class="tag">Data</span><h3>The telemetry is generated.</h3><p>All 4,800 pings come from a 30-day simulation of one bus on one corridor, notebook 01, seed 42. Real AIS-140 traffic will be noisier, and the metrics above should be expected to move.</p></article>
+          <article class="caveat" data-reveal style="--rd:60ms"><span class="tag">Leakage</span><h3>Ablation without GPS speed.</h3><p><code class="mono">gps_<wbr>speed_<wbr>kmh</code> can leak the target, because a slower ping is partly the delay itself. The same regressor, seed 42, days 1–24 / 25–30, trained without that feature:</p><div class="figure"><b data-evidence="ablation-mae">…</b> <span class="muted">min MAE</span><span class="muted">R² <span data-evidence="ablation-r2">…</span> · full model MAE 0.627, R² 0.945</span></div></article>
+          <article class="caveat" data-reveal style="--rd:120ms"><span class="tag">Calibration</span><h3>Coverage is measured on synthetic days.</h3><p>The window is centred on the point delay, with a 0.6 min minimum half-width and a 1.35× peak stretch. On held-out days 25–30 it covers <b data-evidence="coverage-overall">…</b> of actual delays (peak <span data-evidence="coverage-peak">…</span>, off-peak <span data-evidence="coverage-offpeak">…</span>). That is not a guarantee for live traffic.</p></article>
+          <article class="caveat" data-reveal style="--rd:180ms"><span class="tag">Scope</span><h3>One corridor, one bus.</h3><p>NH-44 Jalandhar → Phagwara, 6 stops, 21.2 km. Other routes, buses and operators are on the roadmap, not in this model.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section band" id="artifacts">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">Artifacts</span>
+          <h2 class="h-1" data-reveal>Frozen, hashed, checked at start-up.</h2>
+          <p class="lead" data-reveal style="--rd:80ms">The API loads these files at start-up, and /api/health reports whether every one loaded. Schema, class labels and a smoke inference are checked on export.</p>
+        </div>
+        <div class="card" data-reveal>
+          <div class="table-wrap" role="region" tabindex="0" aria-label="Model artifacts and SHA-256 hashes, scrollable"><table class="table">
+            <thead><tr><th>Artifact</th><th>Role</th><th class="num">Size</th><th>SHA-256</th></tr></thead>
+            <tbody id="artifact-body">
+              <tr><td colspan="4">Loading the hashed inventory from the audit…</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="site-footer-grid">
+        <div class="foot-brand">
+          <img class="on-light" src="assets/logo/lockup-light.svg" alt="TransitPulse" width="156" height="48">
+          <img class="on-dark" src="assets/logo/lockup-dark.svg" alt="TransitPulse" width="156" height="48">
+          <p class="foot-note">Honest arrival windows for Punjab's tier-2 and intercity buses.</p>
+        </div>
+        <div><h2>Product</h2><ul>
+          <li><a href="/how-it-works">How it works</a></li>
+          <li><a href="/demo">Live demo</a></li>
+          <li><a href="/demo?view=evaluator">Evaluator view</a></li>
+        </ul></div>
+        <div><h2>Evidence</h2><ul>
+          <li><a href="/model">Model &amp; evaluation</a></li>
+          <li><a href="/model#caveats">Caveats</a></li>
+          <li><a href="/model#artifacts">Artifacts</a></li>
+        </ul></div>
+        <div><h2>Project</h2><ul>
+          <li><a href="/about">About &amp; roadmap</a></li>
+          <li><a href="/about#contact">Contact</a></li>
+          <li><a href="https://github.com/utkarsh777-wins/TransitPulse" rel="noreferrer">Source on GitHub</a></li>
+        </ul></div>
+      </div>
+      <div class="site-footer-bottom">
+        <span>Prototype · trained on generated telemetry · not an official operator service</span>
+        <span>NH-44 · Jalandhar → Phagwara · IST</span>
+      </div>
+    </div>
+  </footer>
+  <script src="js/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+/* Metric-matched fallback (r2, CLS): Geist is ~2% wider than Arial / Liberation Sans, so the
+   swap from fallback to Geist no longer rewraps lines (system-ui on Linux is DejaVu, ~10% wider). */
+@font-face { font-family: "Geist Fallback"; src: local("Arial"), local("Liberation Sans"), local("Helvetica"); size-adjust: 102%; }
+/* =====================================================================
+   TransitPulse AI — theme v2 "Departures"
+   Tokens → base → shell → components → views → layout → map → sheet
+   ===================================================================== */
+
+/* ---------- 1. Tokens ------------------------------------------------ */
+:root {
+  /* brand (from the Departures logo system) */
+  --vermilion: #FF5A1F;
+  --ink: #111214;
+  --night: #0F1012;
+
+  /* type */
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --t-xs: 0.75rem;     /* 12 — labels, captions (floor; nothing smaller) */
+  --t-sm: 0.8125rem;   /* 13 — secondary text, table cells */
+  --t-base: 0.875rem;  /* 14 — body */
+  --t-md: 1rem;        /* 16 — emphasis, card values */
+  --t-lg: clamp(1.0625rem, 0.95rem + 0.35vw, 1.25rem);   /* 17→20 card titles */
+  --t-xl: clamp(1.375rem, 1.1rem + 0.9vw, 1.875rem);     /* 22→30 view titles */
+  --t-kpi: clamp(1.75rem, 1.35rem + 1.1vw, 2.375rem);    /* 28→38 KPI numerals */
+  --t-hero: clamp(2.5rem, 1.9rem + 2vw, 3.5rem);         /* 40→56 flap ETA */
+  --lh-tight: 1.15;
+  --lh: 1.5;
+
+  /* spacing — 4px base */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px; --s-12: 48px; --s-16: 64px;
+  --page-x: clamp(12px, 2.2vw, 40px);
+  --gap: clamp(12px, 1.1vw + 4px, 20px);
+  --card-pad: clamp(14px, 1vw + 8px, 22px);
+
+  /* radius — the logo tile is rx 5 on a 32-wide tile (≈ 0.16). Flap tiles keep that ratio. */
+  --r-xs: 4px; --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-full: 999px;
+
+  --dur: 160ms;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  --sheet-peek: 64px;
+}
+
+/* Light — warm paper */
+:root, [data-theme="light"] {
+  color-scheme: light;
+  --bg: #F3F1EC;
+  --surface: #FCFBF8;
+  --surface-2: #F0EDE6;
+  --surface-3: #E7E3DA;
+  --line: #E2DED5;
+  --line-strong: #CBC6BB;
+  --fg: #111214;
+  --fg-2: #45474D;
+  --fg-3: #64666C;
+  --accent: #FF5A1F;
+  --on-accent: #111214;
+  --accent-text: #B83A0B;
+  --ontime: #16773A;  --ontime-bg: #E4EFE6;
+  --moderate: #8A5A00; --moderate-bg: #F4EAD3;
+  --severe: #C4202B;  --severe-bg: #F7E1DF;
+  --bar: #2B2D32;
+  --flap-bg: #111214;
+  --flap-fg: #F6F4EF;
+  --flap-seam: #3A3C41;
+  --inverse-bg: #111214;
+  --inverse-fg: #FCFBF8;
+  --shadow: 0 1px 0 rgba(17, 18, 20, .04), 0 1px 2px rgba(17, 18, 20, .06);
+  --shadow-pop: 0 8px 28px rgba(17, 18, 20, .14);
+  --map-casing: #FFFFFF;
+  --map-stop: #FFFFFF;
+  --map-label-bg: rgba(252, 251, 248, .94);
+}
+
+/* Dark — night */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0F1012;
+  --surface: #16171A;
+  --surface-2: #1D1E22;
+  --surface-3: #26272C;
+  --line: #26282D;
+  --line-strong: #3A3D44;
+  --fg: #EEEEF0;
+  --fg-2: #B2B4BB;
+  --fg-3: #8E9199;
+  --accent: #FF5A1F;
+  --on-accent: #111214;
+  --accent-text: #FF7A45;
+  --ontime: #3FB950;  --ontime-bg: #15271B;
+  --moderate: #E0A526; --moderate-bg: #2B2312;
+  --severe: #FF6A5C;  --severe-bg: #331A18;
+  --bar: #C9CBD1;
+  --flap-bg: #232428;
+  --flap-fg: #F4F4F5;
+  --flap-seam: #0F1012;
+  --inverse-bg: #EEEEF0;
+  --inverse-fg: #111214;
+  --shadow: none;
+  --shadow-pop: 0 10px 32px rgba(0, 0, 0, .5);
+  --map-casing: #0F1012;
+  --map-stop: #16171A;
+  --map-label-bg: rgba(22, 23, 26, .94);
+}
+
+/* ---------- Site additions (marketing scale) ------------------------
+   r2: ONE type ramp — 12 / 14 / 16 / 20 / 24 / 36 / 56 / 84 px, weights 400 / 500 / 600 only.
+   Fluid sizes only travel between two adjacent ramp steps and land exactly on them at 480 px and
+   1280 px viewport (so 390 and 1440 render pure ramp values). theme-v2's --t-xs/-base/-md are the
+   12/14/16 steps of the same ramp; demo-bridge.css maps --t-sm 13→14 and the clamps onto it. */
+:root {
+  --fs-12: .75rem; --fs-14: .875rem; --fs-16: 1rem; --fs-20: 1.25rem;
+  --fs-24: 1.5rem; --fs-36: 2.25rem; --fs-56: 3.5rem; --fs-84: 5.25rem;
+  --d-hero: clamp(2.25rem, .45rem + 6vw, 5.25rem);      /* 36 → 84 */
+  --d-1: clamp(2.25rem, 1.5rem + 2.5vw, 3.5rem);        /* 36 → 56 */
+  --d-2: clamp(1.5rem, 1.05rem + 1.5vw, 2.25rem);       /* 24 → 36 */
+  --d-3: clamp(1.25rem, 1.1rem + .5vw, 1.5rem);         /* 20 → 24 */
+  --lead: clamp(1rem, .85rem + .5vw, 1.25rem);          /* 16 → 20 */
+  --body: 1rem;                                         /* 16 */
+  /* spacing: 4 px scale only (theme-v2 --s-*), section rhythm lands on 64 → 160 */
+  --sec-y: 64px;   /* 64 / 96 / 128 / 160 by window class, below */
+  --grid-gap: 16px; /* 16 / 24 / 32 */
+  /* radii: 4 / 8 / 12 / 16 / 24 / full. Nested rule: inner radius = outer − padding. */
+  --r-xs: 4px; --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 24px; --r-full: 999px;
+  --accent-hover: #FF6E3A;
+  --dur-menu-in: 200ms; --dur-menu-out: 150ms; --dur-theme: 160ms;
+}
+/* Surface tiers (max 3): --bg · --surface (cards) · --surface-2 (= --band: alternating sections and wells).
+   --surface-3 is reserved for bar/track backgrounds. Dark --band ΔL* = +3.6 over --bg (was +1.7). */
+[data-theme="light"], :root { --band: #ECE9E2; --surface-2: #ECE9E2; --diagram: #45474D; --diagram-soft: #CBC6BB; --focus: #B83A0B; --scrim: rgba(17, 18, 20, .40); }
+[data-theme="dark"] { --band: #17181C; --surface-2: #1D1E22; --diagram: #B2B4BB; --diagram-soft: #3A3D44; --focus: #FF7A45; --scrim: rgba(0, 0, 0, .62); }
+
+/* Stepped spacing (r2): replaces vw clamps, which rendered off-scale values (e.g. 146.4, 86.4, 28.8 px at 1440).
+   --fl-A-B = A below 600 px, the 4 px-rounded midpoint at 600–1199, B from 1200. */
+:root {
+  --fl-140-200: 140px; --fl-16-28: 16px; --fl-16-36: 16px; --fl-20-28: 20px; --fl-20-32: 20px; --fl-20-40: 20px; --fl-20-48: 20px; --fl-24-80: 24px; --fl-24-96: 24px; --fl-32-72: 32px; --fl-32-96: 32px; --fl-40-72: 40px; --fl-40-80: 40px; --fl-48-112: 48px; --fl-48-88: 48px; --fl-48-96: 48px; --fl-56-128: 56px; --fl-64-160: 64px;
+}
+@media (min-width: 600px) { :root { --fl-140-200: 168px; --fl-16-28: 24px; --fl-16-36: 24px; --fl-20-28: 24px; --fl-20-32: 24px; --fl-20-40: 32px; --fl-20-48: 32px; --fl-24-80: 52px; --fl-24-96: 60px; --fl-32-72: 52px; --fl-32-96: 64px; --fl-40-72: 56px; --fl-40-80: 60px; --fl-48-112: 80px; --fl-48-88: 68px; --fl-48-96: 72px; --fl-56-128: 92px; --fl-64-160: 112px; } }
+@media (min-width: 1200px) { :root { --fl-140-200: 200px; --fl-16-28: 28px; --fl-16-36: 36px; --fl-20-28: 28px; --fl-20-32: 32px; --fl-20-40: 40px; --fl-20-48: 48px; --fl-24-80: 80px; --fl-24-96: 96px; --fl-32-72: 72px; --fl-32-96: 96px; --fl-40-72: 72px; --fl-40-80: 80px; --fl-48-112: 112px; --fl-48-88: 88px; --fl-48-96: 96px; --fl-56-128: 128px; --fl-64-160: 160px; } }
+@media (min-width: 600px) { :root { --sec-y: 96px; --grid-gap: 24px; } }
+@media (min-width: 1200px) { :root { --sec-y: 128px; --grid-gap: 32px; } }
+@media (min-width: 1920px) { :root { --sec-y: 160px; } }

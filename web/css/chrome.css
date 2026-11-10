@@ -1,0 +1,181 @@
+/* =====================================================================
+   TransitPulse site chrome: header, mobile menu sheet, footer, buttons, focus.
+   Loaded on every page, including demo.html (after styles.css).
+   Classes are prefixed .site-* / .btn so they never collide with the
+   dashboard's own classes.
+   ===================================================================== */
+:root {
+  --page-x2: var(--fl-20-48);
+  --wrap: 1240px;
+  --header-h: 68px;
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-in: cubic-bezier(.4, 0, 1, 1);
+  --dur-2: 240ms;
+  --dur-3: 480ms;
+  --focus-inner: var(--bg);
+}
+@media (min-width: 1920px) { :root { --wrap: 1360px; } }
+
+.wrap { width: 100%; max-width: calc(var(--wrap) + 2 * var(--page-x2)); margin-inline: auto; padding-inline: var(--page-x2); }
+
+/* Skip link: fully clipped until focused (r1 used top:-60px, which peeked out at 200% text). */
+.skip-link {
+  position: absolute; left: 8px; top: 8px; z-index: 100;
+  display: inline-flex; align-items: center; min-height: 44px; padding: 8px 16px;
+  background: var(--inverse-bg); color: var(--inverse-fg); border-radius: var(--r-sm);
+  font-size: var(--fs-16); font-weight: 500; text-decoration: none;
+}
+.skip-link:not(:focus) { clip-path: inset(50%); width: 1px; height: 1px; min-height: 0; padding: 0; overflow: hidden; white-space: nowrap; }
+
+/* ---------- Focus: dual ring ----------
+   2 px of the local ground, then 2 px of --focus. The inner ring separates the indicator from any
+   fill (vermilion buttons, chips); the outer ring is what is measured for WCAG 1.4.11 against the
+   inner ring's colour = the surrounding ground. Measured ≥ 4.7:1 on every ground (checks/focus.md).
+   outline stays as a transparent 2 px so Windows forced-colours still draws a ring. */
+/* !important: components with their own box-shadow (selected tabs, cards, current nav item) must not
+   be able to replace the ring at higher specificity — that is what hid it on the selected explorer tab. */
+:focus-visible { outline: 2px solid transparent; outline-offset: 2px; box-shadow: 0 0 0 2px var(--focus-inner), 0 0 0 4px var(--focus) !important; }
+.band, .section.band { --focus-inner: var(--band); }
+.card, .frame, .metrics, .kpi-grid, .caveat, .ex-visual, .site-nav { --focus-inner: var(--surface); }
+.cta-band { --focus: var(--inverse-fg); --focus-inner: var(--inverse-bg); }
+body[data-app] :focus-visible { outline: 2px solid transparent !important; outline-offset: 2px; box-shadow: 0 0 0 2px var(--focus-inner), 0 0 0 4px var(--focus) !important; }
+body[data-app] .card { --focus-inner: var(--surface); }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 8px 20px; border-radius: var(--r-md);
+  font: 500 var(--fs-16)/1.2 var(--font-sans); letter-spacing: -.005em; text-decoration: none; text-align: center;
+  border: 1px solid transparent; cursor: pointer;
+  transition: background-color var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease), transform var(--dur) var(--ease), opacity var(--dur) var(--ease), visibility 0s;
+}
+.btn:active { transform: translateY(1px); }
+.btn svg { width: 16px; height: 16px; flex: none; }
+.btn-primary { background: var(--accent); color: var(--on-accent); }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-secondary { background: var(--surface); color: var(--fg); border-color: var(--line-strong); }
+.btn-secondary:hover { background: var(--surface-2); }
+.btn-ink { background: var(--inverse-bg); color: var(--inverse-fg); }
+.btn-ink:hover { opacity: .9; }
+.btn-ghost { background: transparent; color: var(--fg); padding-inline: 12px; }
+.btn-ghost:hover { background: var(--surface-2); }
+.btn .arrow { transition: transform var(--dur-2) var(--ease-out); }
+.btn:hover .arrow { transform: translateX(4px); }
+
+/* ---------- Header ---------- */
+/* Sticky on purpose: five short pages, one primary action, and the theme toggle must stay in reach.
+   It is 68 px (≤ 9% of a 740 px phone viewport), opaque, and scroll-padding-top keeps focused
+   elements and #anchors clear of it (WCAG 2.4.11). On /demo it is static (demo-bridge.css). */
+.site-header {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--bg);
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--dur-2) var(--ease);
+}
+.site-header.is-scrolled { border-bottom-color: var(--line); }
+.site-header-inner { display: flex; align-items: center; gap: 20px; height: var(--header-h); }
+.site-brand { display: flex; align-items: center; flex: none; color: inherit; text-decoration: none; min-height: 44px; border-radius: var(--r-sm); }
+.site-brand img { height: 52px; width: auto; margin: -8px -6px -8px -10px; }
+[data-theme="light"] .site-brand .on-dark, [data-theme="dark"] .site-brand .on-light { display: none; }
+.site-nav { display: flex; align-items: center; gap: 4px; margin-left: 12px; }
+.site-nav a {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: var(--r-sm);
+  font-size: var(--fs-14); font-weight: 500; color: var(--fg-2); text-decoration: none;
+  transition: color var(--dur) var(--ease), background-color var(--dur) var(--ease);
+}
+.site-nav a:hover { color: var(--fg); background: var(--surface-2); }
+.site-nav a[aria-current="page"] { color: var(--fg); box-shadow: inset 0 -2px 0 var(--fg); border-radius: 0; }
+.site-nav a[aria-current="page"]:focus-visible { box-shadow: inset 0 -2px 0 var(--fg), 0 0 0 2px var(--focus-inner), 0 0 0 4px var(--focus) !important; }
+.site-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.site-actions .gh { font-size: var(--fs-14); }
+/* Header CTA steps back while the hero's own CTA is on screen (site.js, IntersectionObserver),
+   so the first viewport carries one vermilion action, not two. Space is kept: no layout shift. */
+.site-actions .site-cta.is-dormant { opacity: 0; visibility: hidden; transition: opacity var(--dur) var(--ease), visibility 0s linear var(--dur); }
+.site-icon-btn {
+  padding: 0; flex: none; min-width: 44px; /* drop UA 1px 6px padding; never shrink below 44 px (was 42.6 at 1024) */
+  display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: var(--r-md);
+  background: transparent; border: 1px solid var(--line); color: var(--fg); cursor: pointer;
+  transition: background-color var(--dur) var(--ease);
+}
+.site-icon-btn:hover { background: var(--surface-2); }
+.site-icon-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+[data-theme="light"] .i-moon, [data-theme="dark"] .i-sun { display: none; }
+.site-menu-btn { display: none; }
+.site-menu-btn .i-close { display: none; }
+.site-header.is-open .site-menu-btn .i-close { display: block; }
+.site-header.is-open .site-menu-btn .i-menu { display: none; }
+.site-scrim { display: none; }
+
+@media (max-width: 1023.98px) { .site-actions .gh { display: none; } }
+
+/* ---------- Mobile menu: full-screen fixed layer = panel + scrim ----------
+   Open: main/footer (every body child except the header) get `inert`, <html> gets overflow:hidden,
+   the panel fades in and drops 8 px → 0 in 200 ms ease-out; out in 150 ms ease-in.
+   Closes on Esc, scrim tap, link tap, and when the viewport grows past 1100 px (r3: was 900). */
+@media (max-width: 1099.98px) {
+  .site-menu-btn { display: inline-grid; }
+  .site-nav {
+    position: fixed; z-index: 2; top: var(--header-h); left: 0; right: 0;
+    max-height: calc(100dvh - var(--header-h)); overflow-y: auto; overscroll-behavior: contain;
+    flex-direction: column; align-items: stretch; gap: 0; margin: 0;
+    padding: 8px var(--page-x2) calc(24px + env(safe-area-inset-bottom));
+    background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line-strong);
+    box-shadow: var(--shadow-pop);
+    visibility: hidden; opacity: 0; transform: translateY(-8px);
+    transition: opacity var(--dur-menu-out) var(--ease-in), transform var(--dur-menu-out) var(--ease-in), visibility 0s linear var(--dur-menu-out);
+  }
+  .site-scrim {
+    display: block; position: fixed; z-index: 1; inset: var(--header-h) 0 0 0; background: var(--scrim);
+    visibility: hidden; opacity: 0;
+    transition: opacity var(--dur-menu-out) var(--ease-in), visibility 0s linear var(--dur-menu-out);
+  }
+  .site-header.is-open .site-nav { visibility: visible; opacity: 1; transform: none; transition: opacity var(--dur-menu-in) var(--ease-out), transform var(--dur-menu-in) var(--ease-out), visibility 0s; }
+  .site-header.is-open .site-scrim { visibility: visible; opacity: 1; transition: opacity var(--dur-menu-in) var(--ease-out), visibility 0s; }
+  .site-header.is-open { border-bottom-color: var(--line); }
+  .site-nav a { min-height: 56px; font-size: var(--fs-20); color: var(--fg); border-bottom: 1px solid var(--line); border-radius: 0; padding: 0 4px; }
+  .site-nav a[aria-current="page"] { box-shadow: inset 4px 0 0 var(--fg); padding-left: 16px; }
+  .site-nav a[aria-current="page"]:focus-visible { box-shadow: inset 4px 0 0 var(--fg), 0 0 0 2px var(--focus-inner), 0 0 0 4px var(--focus) !important; }
+  .site-nav .site-nav-cta { margin-top: 16px; border: 0; justify-content: center; border-radius: var(--r-md); padding: 8px 20px; font-size: var(--fs-16); }
+}
+html.menu-open { overflow: hidden; }
+@media (min-width: 1100px) { .site-nav .site-nav-cta { display: none; } }
+@media (max-width: 479.98px) {
+  .site-actions .site-cta { display: none; }
+  .site-brand img { height: 48px; margin: -8px -4px -8px -8px; }
+}
+
+/* ---------- Footer ---------- */
+.site-footer { border-top: 1px solid var(--line); padding-block: 56px 40px; color: var(--fg-2); font-size: var(--fs-14); }
+.site-footer-grid { display: grid; grid-template-columns: 1.4fr repeat(3, 1fr); gap: 32px; }
+.site-footer-grid > * { min-width: 0; }
+.site-footer h2 { font: 500 var(--fs-12)/1.4 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--fg-3); margin: 0 0 12px; }
+.site-footer ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.site-footer a { color: var(--fg-2); text-decoration: none; display: inline-flex; align-items: center; min-height: 44px; border-radius: var(--r-xs); }
+.site-footer a:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 4px; }
+.site-footer .foot-brand img { height: 48px; width: auto; margin: -8px -4px 4px -8px; }
+[data-theme="light"] .site-footer .on-dark, [data-theme="dark"] .site-footer .on-light { display: none; }
+.site-footer .foot-note { max-width: 34ch; margin: 0; line-height: 1.55; }
+.site-footer-bottom { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); font: 400 var(--fs-12)/1.5 var(--font-mono); color: var(--fg-3); }
+.site-footer-bottom > * { min-width: 0; overflow-wrap: anywhere; }
+.site-footer-bottom .foot-mode { color: var(--fg-2); }
+@media (max-width: 899.98px) { .site-footer-grid { grid-template-columns: 1fr 1fr; } .site-footer-grid > :first-child { grid-column: 1 / -1; } }
+@media (max-width: 379.98px) { .site-footer-grid { grid-template-columns: 1fr; } }
+
+/* ---------- Reveal on scroll (site.js adds .is-in). Off for reduced motion and shots. ---------- */
+[data-reveal] { opacity: 0; transform: translateY(16px); transition: opacity var(--dur-3) var(--ease-out), transform var(--dur-3) var(--ease-out); transition-delay: var(--rd, 0ms); }
+[data-reveal].is-in, .is-shot [data-reveal], .no-js [data-reveal] { opacity: 1; transform: none; }
+
+/* ---------- Theme switch: 160 ms crossfade of colours (site.js adds .theme-fade for 200 ms) ---------- */
+html.theme-fade, html.theme-fade *, html.theme-fade *::before, html.theme-fade *::after {
+  transition: background-color var(--dur-theme) linear, color var(--dur-theme) linear, border-color var(--dur-theme) linear, fill var(--dur-theme) linear, stroke var(--dur-theme) linear !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] { opacity: 1; transform: none; transition: none; }
+  .btn, .btn .arrow, .site-nav, .site-scrim, .site-header.is-open .site-nav, .site-header.is-open .site-scrim, .site-actions .site-cta.is-dormant { transition: none !important; }
+  .site-nav { transform: none !important; }
+}
+.site-nav a.site-nav-cta, .site-nav a.site-nav-cta:hover { color: var(--on-accent); background: var(--accent); font-weight: 600; }
+
+/* r3: the desktop nav appears only from 1100 px (it wrapped to 2 lines at 900–1099); labels and the CTA never wrap. */
+.site-nav a, .site-cta, .site-actions a, .site-actions .btn { white-space: nowrap; }

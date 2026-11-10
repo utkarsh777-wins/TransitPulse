@@ -1,0 +1,278 @@
+/* Bridges the theme-v2 dashboard (styles.css) into the site shell.
+   The site header scrolls away on /demo (position: relative): the dashboard's own app bar is the
+   sticky layer there, and two stacked sticky bars would eat a phone screen. */
+
+/* ---- r2: one ramp, one radius scale (theme-v2 tokens mapped onto the site system) ---- */
+:root {
+  --t-sm: 0.875rem;                                     /* 13 → 14 */
+  --t-lg: 1.25rem;                                      /* 17–20 → 20 */
+  --t-xl: clamp(1.25rem, 1.1rem + .5vw, 1.5rem);        /* 22–30 → 20–24 */
+  --t-kpi: clamp(1.5rem, 1.05rem + 1.5vw, 2.25rem);     /* 28–38 → 24–36 */
+  --t-hero: clamp(2.25rem, 1.5rem + 2.5vw, 3.5rem);     /* 40–56 → 36–56 */
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
+  --card-pad: 16px; --page-x: 12px; --gap: 12px;   /* stepped: 12/16/20 · 12/24/40 · 16/20/24 */
+}
+@media (min-width: 600px) { :root { --card-pad: 20px; --page-x: 24px; --gap: 16px; } }
+@media (min-width: 1200px) { :root { --card-pad: 24px; --page-x: 40px; --gap: 20px; } }
+[data-theme="light"], :root { --focus: #B83A0B; }
+[data-theme="dark"] { --focus: #FF7A45; }
+
+body[data-app] .site-header { position: relative; border-bottom: 1px solid var(--line); }
+body[data-app] .site-header .wrap { max-width: none; padding-inline: var(--page-x); }
+body[data-app] .app-bar .app-title .brand-desc { padding-left: 0; border-left: 0; }
+body[data-app] .app-bar .topbar-inner { min-height: 60px; }
+body[data-app] h1.brand-product { margin: 0; font-size: var(--t-md); font-weight: 600; line-height: 1.3; }
+@media (max-width: 639.98px) {
+  body[data-app] .app-bar .topbar-inner { grid-template-areas: "tabs meta"; grid-template-columns: minmax(0, 1fr) auto; padding-block: var(--s-2); }
+  /* the H1 stays in the accessibility tree on phones, visually hidden to keep the readout high */
+  body[data-app] .app-bar .app-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  body[data-app] .app-bar .app-title .brand-desc { display: block; } /* theme-v2 sets display:none here, which removed the H1 */
+  body[data-app] .app-bar .app-title .brand-product { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; margin: 0; } /* r3: the H1 itself is 1 px, so it never overlaps visible text */
+  body[data-app] .app-bar .view-tabs { justify-self: stretch; }
+}
+
+/* 44 px minimum targets, applied to theme-v2 controls without changing their visual weight. */
+body[data-app] .view-tab { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+body[data-app] .icon-btn { width: 44px; height: 44px; }
+body[data-app] .seg-btn { min-height: 44px; }
+body[data-app] .play-btn { min-height: 44px; min-width: 44px; }
+body[data-app] .range, body[data-app] .range input { height: 44px; }
+body[data-app] .leaflet-control-zoom a { width: 44px !important; height: 44px !important; line-height: 42px !important; font-size: 20px !important; }
+/* Bus marker: 44 × 44 hit area (Leaflet icon box), visual tile stays 26 px and centred. */
+body[data-app] .bus-anchor { display: grid; place-items: center; border-radius: var(--r-md); }
+body[data-app] .bus-anchor .bus-marker { inset: auto; position: relative; width: 26px; height: 26px; border-radius: var(--r-sm); }
+@media (max-width: 379.98px) {
+  body[data-app] .app-bar .clock { display: none; }
+  body[data-app] .app-bar .topbar-inner { gap: var(--s-2); }
+}
+
+/* ---- Honest status pill: a short text label survives on phones (12 px, never a bare dot) ---- */
+.sync-pill[data-state="error"] { color: var(--severe); border-color: color-mix(in srgb, var(--severe) 40%, var(--line)); }
+.sync-pill[data-state="error"] .sync-dot { background: var(--severe); }
+.sync-pill[data-state="offline"] { color: var(--fg-2); border-color: var(--line-strong); }
+.sync-pill[data-state="offline"] .sync-dot { background: var(--fg-3); animation: none; }
+@media (max-width: 639.98px) {
+  body[data-app] .sync-pill { width: auto; height: 28px; padding: 0 8px; gap: 4px; border: 1px solid var(--line); border-radius: var(--r-full); font-size: var(--t-xs); font-weight: 500; }
+  body[data-app] .sync-pill #sync-label { display: inline; position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  body[data-app] .sync-pill::after { content: "Live"; }
+  body[data-app] .sync-pill[data-state="busy"]::after { content: "Updating"; }
+  body[data-app] .sync-pill[data-state="standin"]::after { content: "Stand-in"; }
+  body[data-app] .sync-pill[data-state="error"]::after { content: "Error"; }
+  body[data-app] .sync-pill[data-state="offline"]::after { content: "Offline"; }
+  body[data-app] .sync-pill[data-state="standin"] { border-color: color-mix(in srgb, var(--moderate) 45%, var(--line)); }
+}
+
+/* ---- Stand-in banner: weight on the ramp (was 650) ---- */
+.standin-banner { padding: 8px var(--page-x); max-width: none; } /* PR #2 bug: theme-v2 caps every <p> at 68ch */
+.standin-banner strong { font-weight: 600; }
+
+/* ---- Phone order: the rider readout first, then map, KPIs, segments (readout was ~815 px down at 390) ---- */
+@media (max-width: 639.98px) {
+  body[data-app] .view-live { grid-template-areas: "rail" "map" "kpis" "segments" "controls"; --map-h: clamp(260px, 44svh, 360px); }
+  body[data-view="live"] .site-footer { padding-bottom: calc(var(--sheet-peek) + 40px + env(safe-area-inset-bottom)); }
+}
+/* KPI cells stack when a cell would be narrower than ~9 characters of its own text (200% text). */
+body[data-app] .kpis { grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5em), 1fr)); }
+@media (min-width: 480px) and (max-width: 899.98px) { body[data-app] .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 900px) { body[data-app] .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } } /* r3: explicit 4-up (auto-fit + a spanning stale note made 8 tracks) */
+body[data-app] .kpi, body[data-app] .kpi-value { min-width: 0; }
+body[data-app] .kpi-value { flex-wrap: wrap; }
+
+/* ---- Page states (app.js sets html[data-demo]) ---- */
+.map-skeleton { display: none; }
+html[data-demo="skeleton"] .map-skeleton, html[data-demo="loading"] .map-skeleton { display: block; position: absolute; inset: 0; width: 100%; height: 100%; z-index: 400; background: var(--surface-2); pointer-events: none; }
+.map-skeleton polyline { fill: none; stroke: var(--line-strong); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.map-skeleton circle { fill: var(--surface); stroke: var(--line-strong); stroke-width: 3; }
+html[data-demo="loading"] .map-skeleton { opacity: 0; }
+@keyframes tp-pulse { 50% { opacity: .55; } }
+.demo-error { display: grid; gap: 12px; max-width: 44rem; margin: 0 auto var(--gap); border-color: color-mix(in srgb, var(--severe) 40%, var(--line)); }
+.demo-error[hidden] { display: none; }
+.demo-error h2 { margin: 0; font-size: var(--t-lg); font-weight: 600; line-height: 1.3; }
+.demo-error p { margin: 0; color: var(--fg-2); }
+.demo-error-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 4px; }
+/* Error: nothing stale is shown — the card is the page until Retry succeeds. */
+html[data-demo="error"] .view-live, html[data-demo="error"] .view-eval { display: none !important; }
+html[data-demo="error"] .demo-error { margin-top: var(--gap); }
+
+/* ---- Site footer replaces the dashboard footer ---- */
+body[data-app] .site-footer { margin-top: 0; }
+
+/* ---- Reflow at 200% text, 320 px: nothing in the dashboard chrome may force sideways scroll ---- */
+body[data-app] .view-tabs, body[data-app] .view-tab, body[data-app] .topbar-meta, body[data-app] .telemetry > div, body[data-app] .telemetry dd { min-width: 0; }
+body[data-app] .view-tab { white-space: normal; text-align: center; line-height: 1.2; }
+body[data-app] .telemetry dd, body[data-app] .telemetry dd *, body[data-app] .tel-route { white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+@media (max-width: 639.98px) {
+  body[data-app] .app-bar .topbar-inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+  body[data-app] .app-bar .view-tabs { flex: 1 1 12rem; }
+  body[data-app] .app-bar .topbar-meta { flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-end; }
+}
+body[data-app] .xai-row > * { min-width: 0; }
+.demo-top { display: contents; }
+body[data-app] .xai-axis-labels { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); white-space: normal; }
+@media (max-width: 639.98px) { body[data-app] .app-bar .app-title .brand-route { display: none; } }
+
+/* r2 measurement leftovers */
+.kpi-status { font-size: var(--fs-20); }               /* was clamp(22px…30px): off the ramp */
+@media (min-width: 840px) { .kpi-status { font-size: var(--fs-24); } }
+#recenter-map, .icon-btn { padding: 0; }                /* UA 1px 6px button padding */
+
+/* Status slot (CLS fix): the stand-in sentence always reserves the height; other states overlay it. */
+.standin-banner { position: relative; }
+.standin-banner .sb-alt { position: absolute; inset: 8px var(--page-x); display: none; align-items: center; }
+.standin-banner:not([data-mode="standin"]) .sb-standin { visibility: hidden; }
+.standin-banner[data-mode="pending"] .sb-pending,
+.standin-banner[data-mode="live"] .sb-live { display: flex; flex-wrap: wrap; gap: 0 .3em; }
+html[data-demo="error"] .standin-banner:not([data-mode="standin"]) .sb-alt { display: none; }
+html[data-demo="error"] .standin-banner:not([data-mode="standin"]) .sb-error { display: flex; flex-wrap: wrap; gap: 0 .3em; }
+.standin-banner .sb-live strong { color: var(--ok, var(--fg)); }
+.standin-banner:not([data-mode="standin"]) { background: var(--surface-2); }
+.standin-banner[data-mode="live"] .sb-live strong { color: var(--fg); }
+
+
+/* CLS: during the first ≤300 ms ("loading", set in <head>) the views are laid out but not painted, so
+   filling in values never moves visible content. The animation is a no-JS safety net: it reveals the
+   page after 1.2 s even if app.js never runs. */
+/* r3: the children are hidden, not <main> itself, so the main landmark stays in the accessibility tree
+   (aria-busy is set while loading). Safety reveal only after 10 s; <noscript> covers no-JS. */
+html[data-demo="loading"] main > :not(.demo-skeleton), html[data-demo="skeleton"] main > :not(.demo-skeleton) { visibility: hidden; animation: tp-reveal 0s linear 10s forwards; }
+@keyframes tp-reveal { to { visibility: visible; } }
+
+/* ---- r3: first-paint skeleton (CSS only; app.js only flips the state) ---- */
+body[data-app] .main { position: relative; }
+.demo-skeleton { display: none; }
+html[data-demo="loading"] .demo-skeleton, html[data-demo="skeleton"] .demo-skeleton {
+  display: grid; gap: var(--gap); position: absolute; z-index: 5; inset: var(--gap) var(--page-x) auto; visibility: visible;
+}
+html[data-demo="loading"] .demo-skeleton { opacity: 0; animation: sk-in 200ms ease-out 300ms forwards; }
+@keyframes sk-in { to { opacity: 1; } }
+.demo-skeleton i, .demo-skeleton .sk-map, .demo-skeleton .sk-card, .demo-skeleton .sk-wide { display: block; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+.sk-kpis { display: grid; gap: var(--gap); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sk-kpis i { height: 104px; }
+.sk-split { display: grid; gap: var(--gap); grid-template-columns: minmax(0, 1fr); }
+.sk-map { height: 300px; display: grid !important; place-items: center; overflow: hidden; background: var(--surface-2) !important; }
+.sk-map svg { width: 100%; height: 100%; }
+.sk-map polyline { fill: none; stroke: var(--line-strong); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.sk-map circle { fill: var(--surface); stroke: var(--line-strong); stroke-width: 3; }
+.sk-card, .sk-wide { display: grid !important; gap: 12px; align-content: start; padding: var(--card-pad); }
+.sk-card { min-height: 300px; }
+.sk-card b, .sk-wide b { display: block; height: 14px; border-radius: var(--r-xs); background: var(--surface-3, var(--surface-2)); }
+.sk-card b.big { height: 56px; width: 50%; }
+.sk-card b.w60 { width: 60%; } .sk-card b.w80, .sk-wide b.w80 { width: 80%; } .sk-card b.w40, .sk-wide b.w40 { width: 40%; }
+@media (min-width: 640px) { .sk-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .sk-split { grid-template-columns: minmax(0, 1fr) minmax(320px, 400px); } .sk-map { height: 440px; } }
+@media (prefers-reduced-motion: no-preference) {
+  .demo-skeleton b, .sk-map polyline { animation: tp-pulse 1.4s ease-in-out infinite; }
+}
+@media (prefers-reduced-motion: reduce) { html[data-demo="loading"] .demo-skeleton { animation-duration: 0s; } }
+
+/* ---- r3: offline = stale. Values turn secondary grey; a note gives the time of the last result. ---- */
+/* The note sits under the KPI row without becoming a grid item (it would add auto-fit tracks). */
+body[data-app] .kpis { position: relative; }
+html[data-demo-stale] body[data-app] .kpis { padding-bottom: 36px; }
+.stale-note { position: absolute; left: 0; bottom: 0; margin: 0; }
+html[data-demo-stale] .kpi-value, html[data-demo-stale] .eta-figure, html[data-demo-stale] #stat-status,
+html[data-demo-stale] .eta-delta, html[data-demo-stale] .advice, html[data-demo-stale] .facts dd,
+html[data-demo-stale] .seg-nums, html[data-demo-stale] .seg-status { color: var(--fg-2); } /* dimmed by colour, not opacity, so text keeps ≥ 4.5:1 */
+html[data-demo-stale] .seg-nums b, html[data-demo-stale] .facts dd b { color: var(--fg-2); }
+html[data-demo-stale] .status-dot { animation: none !important; }
+
+/* ---- r3: phone sheet head at any text size: grabber row, then title / summary beside chevron. ---- */
+@media (max-width: 639.98px) {
+  .controls-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--s-2); }
+  .sheet-handle { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "grab grab" "title chev" "sum chev"; padding-top: 4px; }
+  .sheet-handle .grabber { grid-area: grab; position: static; justify-self: center; margin: 0 0 8px; }
+  .sheet-handle .card-title { min-width: 0; }
+  /* r4: one line each, ellipsis instead of wrapping, so at 200 % text the peek stays ≈ 15 % of a 640 px
+     screen (was ~175 px). The full title and summary stay in the handle's accessible name. */
+  .controls-card .card-title .h2, .sheet-handle .sheet-summary { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+  .sheet-handle .grabber { margin-bottom: 4px; }
+  html { scroll-padding-bottom: calc(var(--sheet-peek) + 16px); }
+}
+/* ---- r3: KPI row 2-up from 480 to 899 (no 3 + 1); ETA facts 2-up, 1-up when the card is narrow. ---- */
+/* KPI row: 2-up below 900 (no 3 + 1), 4-up from 900. */
+body[data-app] .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+body[data-app] .facts div:first-child { grid-column: 1 / -1; }
+@container (max-width: 20em) { body[data-app] .facts { grid-template-columns: minmax(0, 1fr); } }
+body[data-app] .facts dt { overflow-wrap: break-word; }
+/* ---- r3: 1024–1599 the segment table and the controls each take a full row (no ~260 px blank card). ---- */
+@media (min-width: 1024px) and (max-width: 1599.98px) {
+  body[data-app] .view-live { grid-template-areas: "kpis kpis" "map rail" "segments segments" "controls controls"; }
+  body[data-app] .area-controls .control-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+body[data-app] .area-segments { align-self: start; }
+/* ---- r3: XAI legend keeps sign and word together. ---- */
+.xai-axis-labels .nw { white-space: nowrap; }
+/* ---- r3: short viewports (phone landscape, 200 % text on small phones): the app bar scrolls away. ---- */
+@media (max-height: 699.98px) { body[data-app] .topbar.app-bar { position: relative; top: auto; } }
+@media (max-width: 639.98px) { .controls-head { min-height: 64px; flex: none; } }
+.sk-kpis i { position: relative; }
+.sk-kpis i::before, .sk-kpis i::after { content: ""; position: absolute; left: 16px; height: 12px; width: 45%; border-radius: var(--r-xs); background: var(--surface-2); top: 20px; }
+.sk-kpis i::after { top: 48px; height: 28px; width: 35%; }
+/* Phone order matches the ready layout: rider card, map, then the KPI pairs. */
+@media (max-width: 639.98px) { .sk-kpis { order: 2; } .sk-card { order: -1; } .sk-map { height: 260px; } .sk-card { min-height: 360px; } }
+/* r3: segment names wrap instead of clipping when the list is narrow (200 % text). */
+@container (max-width: 760px) { .seg-name strong { overflow: visible; text-overflow: clip; overflow-wrap: anywhere; } }
+
+/* r3 · density: phone segment rows were 144–165 px. Tighter row gap and padding, and the
+   numbers run with a smaller gap; the name gets the full width and the status badge moves to the
+   confidence row, so long names no longer wrap beside it. The row stays one 44 px+ button. */
+@container (max-width: 520px) {
+  body[data-app] .seg-row.seg-item { row-gap: 4px; padding-block: 12px; grid-template-areas: "name name" "nums nums" "conf status"; align-items: center; }
+  body[data-app] .seg-row.seg-item .seg-badge { align-self: center; }
+  body[data-app] .seg-nums { gap: 4px 12px; }
+  body[data-app] .seg-name small { line-height: 1.3; }
+}
+/* r3: the segment table's columns are sized in em, and the header row was 12 px while the rows are 14 px,
+   so header labels sat 8–24 px off their columns. The header row now has the row font size; its labels stay 12 px. */
+body[data-app] .seg-row.seg-head { font-size: var(--t-sm); }
+body[data-app] .seg-row.seg-head > * { font-size: var(--t-xs); }
+/* r4: tabular figures on data UI (site.css's rule doesn't load here; `font:` shorthands reset it); prose keeps proportional figures. */
+body[data-app] main *:not(p, li, h1, h2, h3, h4, h5, h6, blockquote, figcaption, a, label, p *, h1 *, h2 *, h3 *, h4 *, blockquote *, figcaption *) { font-variant-numeric: tabular-nums !important; }
+body[data-app] main :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, figcaption, a, label) { font-variant-numeric: normal !important; }
+body[data-app] main :is(.kpi-foot, .kpi-value, .field-label output, .mono, .num, .unit, .flap, .fc, .seg-num, .seg-nums b, .tag, .badge, .status-chip, td, th, b, strong, time, output, code, [data-evidence], ul[class] > li) { font-variant-numeric: tabular-nums !important; } /* r4: numbers and data UI only; prose keeps proportional figures */
+
+/* r4: an open phone sheet is modal (app.js setSheetModal): the page behind it doesn't scroll. */
+@media (max-width: 639.98px) { html.sheet-open { overflow: hidden; } }
+
+/* r4 · offline, every live element: the rider flap, status chips (rider card + segment list), the
+   live-status KPI and its dot, the route colours and the bus all drop to neutral, and the rider card
+   and status KPI get an "as of HH:MM:SS IST" stamp. Colour, not opacity, so text stays ≥ 4.5:1. */
+html[data-demo-stale] .flap .fc { background: var(--surface-2); color: var(--fg-2); box-shadow: inset 0 0 0 1px var(--line); }
+html[data-demo-stale] .flap .fc::after { background: var(--line); }
+html[data-demo-stale] .flap .fp, html[data-demo-stale] .eta-figure .unit { color: var(--fg-2); }
+html[data-demo-stale] .status-chip, html[data-demo-stale] .status-chip.ontime, html[data-demo-stale] .status-chip.moderate, html[data-demo-stale] .status-chip.severe { color: var(--fg-2); background: var(--surface-2); }
+html[data-demo-stale] .status-dot { background: var(--fg-3) !important; }
+html[data-demo-stale] #stat-status, html[data-demo-stale] .kpi-status { color: var(--fg-2) !important; } /* app.js colours it inline */
+html[data-demo-stale] .route-line { stroke: var(--fg-3); }
+html[data-demo-stale] .bus-marker { background: var(--surface-2); color: var(--fg-2); }
+html[data-demo-stale] .window-band { background: var(--fg-3); }
+html[data-demo-stale] [data-asof]::after { content: " · as of " attr(data-asof) " IST"; font-weight: 500; color: var(--fg-2); }
+html[data-demo-stale] #confidence-badge, html[data-demo-stale] .eta-card .badge { color: var(--fg-2) !important; background: var(--surface-2) !important; border-color: var(--line) !important; }
+body[data-app] .artifact-hash { white-space: nowrap; } /* r4: hashes never wrap mid-string */
+/* r4 · 4 px grid: em-based flap/unit insets snap to 4 px steps at every size; map dots centre with
+   transforms (positioning, not spacing); Leaflet's 10 px control inset becomes 12. */
+body[data-app] .flap .fc { padding: round(up, .14em, 4px) round(.08em, 4px) round(up, .12em, 4px); }
+body[data-app] .flap-sm .fc { padding: round(up, .1em, 4px) round(.06em, 4px) round(up, .08em, 4px); }
+body[data-app] .flap .fp { padding-bottom: round(.12em, 4px); }
+body[data-app] .eta-figure .unit { padding-bottom: round(.35em, 4px); }
+body[data-app] .main { padding-bottom: round(calc(var(--gap) * 1.5), 4px); }
+body[data-app] .stop-dot, body[data-app] .stop-anchor.is-terminal .stop-dot { margin: 0; transform: translate(-50%, -50%); }
+body[data-app] .leaflet-top .leaflet-control { margin-top: 12px; }
+body[data-app] .leaflet-left .leaflet-control { margin-left: 12px; }
+/* r4 · LCP: status lines are plain blocks (not flex), so each message paints as one text block; the pending
+   line is worded to fill the same slot as the stand-in line, so the slot's first paint is its largest. */
+.standin-banner[data-mode="pending"] .sb-pending, .standin-banner[data-mode="live"] .sb-live,
+html[data-demo="error"] .standin-banner:not([data-mode="standin"]) .sb-error { display: block; }
+/* r4 · enlarged-text pass (Smith 200 % sweep): words break only at hyphenation points, chips never wrap,
+   and the phone segment numbers form a 2 × 2 block instead of 3 + 1. */
+body[data-app] main :is(h2, h3, strong, .seg-name, .tel-route) { hyphens: auto; -webkit-hyphens: auto; hyphenate-limit-chars: 8 4 4; }
+body[data-app] .state-chip, body[data-app] .telemetry dd .state-chip { white-space: nowrap; }
+body[data-app] .seg-row.seg-item .seg-nums > * { flex: 1 0 calc(50% - 8px); }
+body[data-app] .seg-row.seg-item .seg-nums b { white-space: nowrap; }
+/* r4 · the window column fits "−0.7 to +0.6" at every width (it overhung by 8 px at 880–920); header and
+   rows share the same em tracks. Compact rows: the "SEG 01" prefix may wrap before the name. */
+@container (min-width: 760.02px) {
+  body[data-app] .seg-row { grid-template-columns: 4.2em minmax(11em, 1.7fr) 4em 4em 4.4em minmax(8.6em, 1fr) 8.6em minmax(7em, .9fr); }
+}
+body[data-app] .seg-name strong::before { white-space: pre-wrap; }
+body[data-app] .xai-label { min-width: 0; overflow-wrap: break-word; }

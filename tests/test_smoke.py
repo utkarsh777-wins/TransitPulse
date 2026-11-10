@@ -78,9 +78,89 @@ def test_health_and_simulate_use_frozen_models() -> None:
 
         page = client.get("/")
         assert page.status_code == 200
-        assert "TransitPulse" in page.text
+        assert "Arrival windows" in page.text
+
+        demo = client.get("/demo")
+        assert demo.status_code == 200
+        assert 'id="map"' in demo.text
+        assert "PROTOTYPE ONLY" not in demo.text
+        assert 'id="walk-slider"' in demo.text
+        assert 'id="eta-leave"' in demo.text
+
+        for path, needle in (
+            ("/how-it-works", "From a GPS ping"),
+            ("/model", "synthetic GPS"),
+            ("/about", "Utkarsh Kumar"),
+        ):
+            response = client.get(path)
+            assert response.status_code == 200, path
+            assert needle in response.text
+
+        evidence = client.get("/api/evidence")
+        assert evidence.status_code == 200
+        evidence_body = evidence.json()
+        coverage = evidence_body["interval_coverage"]
+        assert coverage is not None
+        assert 0.0 <= coverage["overall"] <= 1.0
+        ablation = evidence_body["ablation"]["metrics"]
+        assert ablation["reg_mae"] > 0
+        assert "reg_r2" in ablation
+
+        default_sim = client.post("/api/simulate", json=SIMULATION)
+        assert default_sim.status_code == 200
+        default_segment = default_sim.json()["segments"][0]
+        assert default_sim.json()["simulation"]["walk_time_min"] == 5.0
+        assert default_segment["leave_by_min"] == pytest.approx(
+            default_segment["window_start_min"] - 5.0, abs=0.05
+        )
+
+        custom = client.post("/api/simulate", json={**SIMULATION, "walk_time_min": 12})
+        custom_segment = custom.json()["segments"][0]
+        assert custom_segment["window_start_min"] == default_segment["window_start_min"]
+        assert custom_segment["leave_by_min"] == pytest.approx(custom_segment["window_start_min"] - 12.0, abs=0.05)
+
+        later = default_sim.json()["segments"][-1]
+        assert later["segment_id"] == 5
+        cumulative_arrival = later["scheduled_arrival_offset_min"] + later["cumulative_delay_min"]
+        assert later["window_start_min"] == pytest.approx(round(cumulative_arrival, 1), abs=0.05)
+        assert later["leave_by_min"] == pytest.approx(later["window_start_min"] - 5.0, abs=0.05)
+        assert later["window_start_min"] > later["scheduled_time_min"] + 20
+
+        zero = client.post("/api/simulate", json={**SIMULATION, "walk_time_min": 0})
+        assert zero.status_code == 200
+        zero_segment = zero.json()["segments"][-1]
+        assert zero_segment["leave_by_min"] == pytest.approx(zero_segment["window_start_min"], abs=0.05)
+
+        assert client.post("/api/simulate", json={**SIMULATION, "walk_time_min": -1}).status_code == 422
+        assert client.post("/api/simulate", json={**SIMULATION, "walk_time_min": 30.1}).status_code == 422
+        assert client.post("/api/simulate", json={**SIMULATION, "walk_time_min": "x"}).status_code == 422
+
+        omitted = {key: value for key, value in SIMULATION.items() if key != "walk_time_min"}
+        default_walk = client.post("/api/simulate", json=omitted)
+        assert default_walk.status_code == 200
+        assert default_walk.json()["simulation"]["walk_time_min"] == 5.0
 
     assert {path: path.stat().st_mtime_ns for path in artifact_times} == artifact_times
+
+
+def test_unknown_api_path_returns_json_not_found() -> None:
+    with TestClient(app) as client:
+        response = client.get("/api/nope")
+        assert response.status_code == 404
+        assert response.headers["content-type"].startswith("application/json")
+        assert response.json() == {"detail": "Not Found"}
+        health = client.get("/api/health")
+        assert health.status_code == 200
+        assert health.json()["service"] == "TransitPulse AI"
+
+
+def test_unknown_path_returns_the_not_found_page() -> None:
+    with TestClient(app) as client:
+        response = client.get("/not-on-this-route")
+        assert response.status_code == 404
+        assert "Page not found" in response.text
+        assert "This stop" in response.text
+        assert 'href="/vendor/fonts/fonts.css"' in response.text
 
 
 def test_frontend_api_urls_are_relative() -> None:
@@ -92,8 +172,21 @@ def test_frontend_api_urls_are_relative() -> None:
     assert "API calls must be relative" in script
 
 
+def test_pages_do_not_ship_placeholders() -> None:
+    about = (ROOT / "web" / "about.html").read_text(encoding="utf-8")
+    demo = (ROOT / "web" / "demo.html").read_text(encoding="utf-8")
+    model = (ROOT / "web" / "model.html").read_text(encoding="utf-8")
+    assert "team@example.com" not in about
+    assert "Team member name" not in about
+    assert "Utkarsh Kumar" in about
+    assert "github.com/utkarsh777-wins" in about
+    assert "PROTOTYPE ONLY" not in demo
+    assert "not in repo" not in model
+    assert "not measured yet" not in model
+
+
 def test_standin_fallback_is_labeled() -> None:
-    page = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    page = (ROOT / "web" / "demo.html").read_text(encoding="utf-8")
     script = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
     assert "Stand-in fallback" in page
     assert "not the trained model" in page

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#F3F1EC" id="meta-theme-color">
+  <title>About & roadmap · TransitPulse</title>
+  <meta name="description" content="Punjab's tier-2 and intercity buses, and the road to AIS-140 feeds and PM-eBus Sewa fleets.">
+  <script>
+    (function () {
+      var q = new URLSearchParams(location.search).get("theme"), s = null;
+      try { s = localStorage.getItem("tp-theme"); } catch (e) {}
+      var t = q === "light" || q === "dark" ? q : s === "light" || s === "dark" ? s
+        : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.dataset.theme = t;
+    })();
+  </script>
+  <link rel="icon" href="assets/logo/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/logo/app-icon.svg">
+  <link rel="preload" href="vendor/fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="vendor/fonts/geist-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/site.bundle.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap site-header-inner">
+      <a class="site-brand" href="/" aria-label="TransitPulse home">
+        <img class="on-light" src="assets/logo/lockup-light.svg" alt="TransitPulse" width="170" height="52">
+        <img class="on-dark" src="assets/logo/lockup-dark.svg" alt="TransitPulse" width="170" height="52">
+      </a>
+      <nav class="site-nav" id="site-nav" aria-label="Main">
+        <a href="/how-it-works">How it works</a>
+        <a href="/demo">Live demo</a>
+        <a href="/model">Model &amp; evaluation</a>
+        <a href="/about" aria-current="page">About &amp; roadmap</a>
+        <a class="btn btn-primary site-nav-cta" href="/demo">Open live demo</a>
+      </nav>
+      <div class="site-actions">
+        <a class="btn btn-ghost gh" href="https://github.com/utkarsh777-wins/TransitPulse" rel="noreferrer">GitHub</a>
+        <button class="site-icon-btn theme-toggle" id="theme-toggle" type="button" aria-label="Switch theme" title="Switch theme">
+          <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
+        </button>
+        <a class="btn btn-primary site-cta" href="/demo">Live demo <span class="arrow" aria-hidden="true">→</span></a>
+        <button class="site-icon-btn site-menu-btn" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu">
+          <svg class="i-menu" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          <svg class="i-close" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+  <main id="main">
+    <section class="page-hero">
+      <div class="wrap">
+        <span class="eyebrow" data-reveal>About &amp; roadmap</span>
+        <h1 class="h-1" data-reveal style="--rd:60ms">Built for the buses Punjab actually rides.</h1>
+        <p class="lead" data-reveal style="--rd:120ms">Big metros have real-time apps. Tier-2 towns and intercity highways mostly have a timetable and a guess. TransitPulse starts on one 21-km stretch of NH-44. The model is trained on synthetic GPS (notebook 01, seed 42). Its scores are not real-world accuracy.</p>
+      </div>
+    </section>
+
+    <section class="section tight" style="padding-top:0">
+      <div class="wrap">
+        <div class="card ps-card" data-reveal>
+          <div>
+            <p class="card-label">The problem</p>
+            <h2 class="h-2" style="margin-top:12px">Real-Time Public Transport Tracking for Small Cities</h2>
+            <p class="body-2" style="margin-top:12px;max-width:34em">The problem statement asks for live bus tracking, arrival estimates and route information that work in small cities and on low-bandwidth connections. TransitPulse answers the arrival question with an honest window instead of a single minute.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">Why tier-2 and intercity</span>
+          <h2 class="h-1" data-reveal>Long headways make every minute expensive.</h2>
+          <p class="lead" data-reveal style="--rd:80ms">When the next bus is 30 minutes away, missing this one is costly, and waiting too early is too. A window plus a leave-by time <span class="src-tag" title="Leave-by = window start − walk time (default 5 min). Returned as leave_by_min by POST /api/simulate.">from /api/simulate</span> is useful on a highway in a way a city-style countdown is not.</p>
+        </div>
+        <div class="grid-3">
+          <article class="card" data-reveal><p class="card-label">Corridor</p><h3 class="h-3" style="margin-top:12px">Jalandhar → Phagwara</h3><p class="body-2" style="margin-top:8px">6 stops, 5 segments, 21.2 km, 35.5 min scheduled. Mixed city and highway traffic.</p></article>
+          <article class="card" data-reveal style="--rd:60ms"><p class="card-label">Rider</p><h3 class="h-3" style="margin-top:12px">Students, workers, day trips</h3><p class="body-2" style="margin-top:8px">Stops include a university gate and two bus stands, where a missed bus costs real time.</p></article>
+          <article class="card" data-reveal style="--rd:120ms"><p class="card-label">Constraint</p><h3 class="h-3" style="margin-top:12px">Patchy data, low bandwidth</h3><p class="body-2" style="margin-top:8px">Quality gates before the model; a light rider view that needs no map to be useful.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section band" id="roadmap">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">Roadmap</span>
+          <h2 class="h-1" data-reveal>From one corridor to state fleets.</h2>
+          <p class="lead" data-reveal style="--rd:80ms">A plan, not a promise. Every later phase depends on access to real vehicle-tracking data.</p>
+        </div>
+        <ol class="roadmap">
+          <li class="rm is-now" data-reveal><p class="when">Now · prototype</p><h3>NH-44 on generated data</h3><ul><li>Delay model, quantile window, evaluator view</li><li>FastAPI backend and live corridor dashboard</li><li>Data-quality audit and hashed artifacts</li></ul></li>
+          <li class="rm" data-reveal style="--rd:80ms"><p class="when">Next · real feeds</p><h3>AIS-140 GPS ingestion</h3><ul><li>Read live pings from AIS-140 vehicle tracking units</li><li>Re-train and re-test on real trips</li><li>Re-measure window coverage on live trips</li></ul></li>
+          <li class="rm" data-reveal style="--rd:160ms"><p class="when">Then · pilot</p><h3>More Punjab corridors</h3><ul><li>Multi-route, multi-bus model</li><li>Low-bandwidth rider view and stop displays</li><li>Operator dashboard for depots</li></ul></li>
+          <li class="rm" data-reveal style="--rd:240ms"><p class="when">Later · scale</p><h3>PM-eBus Sewa fleets</h3><ul><li>Bring the same window to new electric-bus fleets</li><li>Charging and dwell signals as features</li><li>Open API for journey planners</li></ul></li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="section" id="team">
+      <div class="wrap">
+        <div class="sec-head is-stacked">
+          <span class="eyebrow">Team</span>
+          <h2 class="h-1" data-reveal>The people behind it.</h2>
+          <p class="lead" data-reveal style="--rd:80ms">One builder on this prototype, at Lovely Professional University.</p>
+        </div>
+        <div class="team">
+          <article class="person">
+            <div class="av">UK</div>
+            <h3>Utkarsh Kumar</h3>
+            <p>Lovely Professional University</p>
+            <p><a href="https://github.com/utkarsh777-wins" rel="noreferrer">github.com/<wbr>utkarsh777-wins <span aria-hidden="true">↗</span></a></p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section band" id="contact">
+      <div class="wrap contact">
+        <div>
+          <span class="eyebrow">Contact</span>
+          <h2 class="h-1" style="margin-top:20px" data-reveal>Run a route in Punjab? Let's test it on yours.</h2>
+        </div>
+        <div class="contact-list" data-reveal style="--rd:80ms">
+          <a href="https://github.com/utkarsh777-wins/TransitPulse" rel="noreferrer"><span>Source</span><span>github.com/<wbr>utkarsh777-wins/<wbr>TransitPulse</span><span aria-hidden="true">↗</span></a>
+          <a href="https://github.com/utkarsh777-wins" rel="noreferrer"><span>Builder</span><span>github.com/<wbr>utkarsh777-wins</span><span aria-hidden="true">↗</span></a>
+          <a href="/demo"><span>Live demo</span><span>Open the corridor simulator</span><span aria-hidden="true">→</span></a>
+          <a href="/model"><span>Model card</span><span>Metrics and caveats</span><span aria-hidden="true">→</span></a>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="site-footer-grid">
+        <div class="foot-brand">
+          <img class="on-light" src="assets/logo/lockup-light.svg" alt="TransitPulse" width="156" height="48">
+          <img class="on-dark" src="assets/logo/lockup-dark.svg" alt="TransitPulse" width="156" height="48">
+          <p class="foot-note">Honest arrival windows for Punjab's tier-2 and intercity buses.</p>
+        </div>
+        <div><h2>Product</h2><ul>
+          <li><a href="/how-it-works">How it works</a></li>
+          <li><a href="/demo">Live demo</a></li>
+          <li><a href="/demo?view=evaluator">Evaluator view</a></li>
+        </ul></div>
+        <div><h2>Evidence</h2><ul>
+          <li><a href="/model">Model &amp; evaluation</a></li>
+          <li><a href="/model#caveats">Caveats</a></li>
+          <li><a href="/model#artifacts">Artifacts</a></li>
+        </ul></div>
+        <div><h2>Project</h2><ul>
+          <li><a href="/about">About &amp; roadmap</a></li>
+          <li><a href="/about#contact">Contact</a></li>
+          <li><a href="https://github.com/utkarsh777-wins/TransitPulse" rel="noreferrer">Source on GitHub</a></li>
+        </ul></div>
+      </div>
+      <div class="site-footer-bottom">
+        <span>Prototype · trained on generated telemetry · not an official operator service</span>
+        <span>NH-44 · Jalandhar → Phagwara · IST</span>
+      </div>
+    </div>
+  </footer>
+  <script src="js/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+/* Geist and Geist Mono, vendored so pages do not call a font CDN.
+   Latin variable fonts. License: OFL.txt (SIL Open Font License 1.1). */
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("geist-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Geist Mono";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("geist-mono-latin.woff2") format("woff2");
+}
