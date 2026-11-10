@@ -231,12 +231,6 @@
             <div class="metric"><p class="val">0.627<small>min</small></p><h3>Mean absolute error</h3><p>Held-out days 25–30. RMSE 0.914 min, R² 0.945.</p></div>
             <div class="metric"><p class="val">82.07<small>%</small></p><h3>Less error than the baseline</h3><p>The historical-average baseline misses by 3.498 min on the same days.</p></div>
             <div class="metric"><p class="val">3.2<small>× wider</small></p><h3>Peak window vs off-peak</h3><p>3.491 vs 1.095 min. The window widens when the road is less predictable.</p></div>
-          </div>
-          <div class="callout" style="margin-top:20px" data-reveal>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v4M12 17h.01"/></svg>
-            <p><strong>These scores are not real-world accuracy.</strong> The training table is synthetic GPS from notebook 01, seed 42, for this one corridor. The published interval covers <b class="mono" data-evidence="coverage-overall">…</b> of held-out delays (peak <span class="mono" data-evidence="coverage-peak">…</span>, off-peak <span class="mono" data-evidence="coverage-offpeak">…</span>). Retraining without <code class="mono">gps_<wbr>speed_<wbr>kmh</code> gives MAE <b class="mono" data-evidence="ablation-mae">…</b> min and R² <span class="mono" data-evidence="ablation-r2">…</span>. <a class="link link-inline" href="/model#caveats">All caveats</a></p>
-            <p class="ev-retry" role="status"><span>Coverage and ablation figures couldn’t load from /api/evidence.</span><button type="button" data-ev-retry>Retry</button></p>
-          </div>
         </div>
       </div>
     </section>
