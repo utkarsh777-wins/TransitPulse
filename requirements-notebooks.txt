@@ -1,0 +1,3 @@
+# Notebook extras. Notebook 01 imports seaborn; the service does not.
+-r requirements.txt
+seaborn==0.13.2

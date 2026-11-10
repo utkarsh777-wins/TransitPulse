@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -95,6 +96,35 @@ ROUTE_NAME = "NH-44 GT Road Corridor"
 CORRIDOR_DISTANCE_KM = round(sum(segment["distance_km"] for segment in SEGMENTS), 2)
 CORRIDOR_SCHEDULED_MIN = round(sum(segment["scheduled_time_min"] for segment in SEGMENTS), 2)
 
+FROZEN_ARTIFACTS = (
+    "delay_regressor.joblib",
+    "delay_classifier.joblib",
+    "quantile_lower_10.joblib",
+    "quantile_upper_90.joblib",
+    "model_metadata.json",
+    "dq_audit_report.json",
+)
+
+
+def server_host() -> str:
+    """Bind address. Set HOST to override; empty or unset uses all interfaces."""
+    host = os.environ.get("HOST", "").strip()
+    return host or "0.0.0.0"
+
+
+def server_port() -> int:
+    """TCP port. Render sets PORT; local runs default to 8000."""
+    raw = os.environ.get("PORT", "").strip()
+    if not raw:
+        return 8000
+    try:
+        port = int(raw)
+    except ValueError as exc:
+        raise RuntimeError(f"PORT must be an integer, got {raw!r}") from exc
+    if port < 1 or port > 65535:
+        raise RuntimeError(f"PORT must be between 1 and 65535, got {port}")
+    return port
+
 
 class SimulationRequest(BaseModel):
     hour_of_day: int = Field(default=13, ge=0, le=23)
@@ -162,6 +192,14 @@ def corridor_payload() -> dict[str, Any]:
 
 
 def load_artifacts() -> dict[str, Any]:
+    missing = [name for name in FROZEN_ARTIFACTS if not (MODELS_DIR / name).is_file()]
+    if missing:
+        raise FileNotFoundError(
+            "Frozen model artifacts are missing ("
+            + ", ".join(missing)
+            + "). Commit the files under models/ or rebuild them once with "
+            "src/export_artifacts.py (random_state 42). The server does not train on startup."
+        )
     regressor = joblib.load(MODELS_DIR / "delay_regressor.joblib")
     classifier = joblib.load(MODELS_DIR / "delay_classifier.joblib")
     quantile_lower = joblib.load(MODELS_DIR / "quantile_lower_10.joblib")
@@ -564,3 +602,13 @@ if ASSETS_DIR.is_dir():
     app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 if WEB_DIR.is_dir():
     app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="dashboard")
+
+
+def main() -> None:
+    import uvicorn
+
+    uvicorn.run(app, host=server_host(), port=server_port())
+
+
+if __name__ == "__main__":
+    main()

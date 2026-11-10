@@ -4,32 +4,93 @@ Real-time public transport tracking and delay prediction for the NH-44 corridor 
 
 ![Live rider and fleet simulator](assets/dashboard_live.png)
 
-## Quick Start
+## Run locally
+
+Use Python 3.11 (`.python-version` is `3.11.18`). The joblib files in `models/` are already committed. Startup loads them. It does not train.
+
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Windows PowerShell:
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+Notebook `01` imports seaborn. That package is not part of the service install:
+
+```bash
+pip install -r requirements-notebooks.txt
+```
+
+`python -m src.app` reads `HOST` and `PORT` (defaults `0.0.0.0` and `8000`):
+
+```bash
+HOST=127.0.0.1 PORT=8000 python -m src.app
+```
+
+The Render process uses the same app object:
+
+```bash
+uvicorn src.app:app --host 0.0.0.0 --port 8000
+```
+
+Open `http://127.0.0.1:8000`. Evaluator view: `http://127.0.0.1:8000/?view=evaluator`.
+
+`run.ps1` is the Windows launcher. It installs `requirements.txt` if imports fail, runs `src/export_artifacts.py` only when `models/dq_audit_report.json` is missing, and starts uvicorn. With the committed artifacts present it does not retrain.
 
 ```powershell
 .\run.ps1
-```
-
-The launcher verifies the Python environment, installs missing dependencies, regenerates frozen artifacts when needed, starts FastAPI, and opens the dashboard at `http://127.0.0.1:8000`.
-
-Useful options:
-
-```powershell
 .\run.ps1 -NoBrowser
 .\run.ps1 -Port 8080
 .\run.ps1 -Reload
-powershell -ExecutionPolicy Bypass -File .\run.ps1
 ```
 
-Evaluator view: `http://127.0.0.1:8000/?view=evaluator`
+## Deploy to Render
 
-Manual launch:
+`render.yaml` is a Blueprint for one free Python web service. The build command is only `pip install -r requirements.txt`. Model files are already in git, trained with seed 42, so the build and each boot skip training.
 
-```powershell
-venv\Scripts\python.exe -m pip install -r requirements.txt
-venv\Scripts\python.exe src\export_artifacts.py
-venv\Scripts\python.exe -m uvicorn --app-dir src app:app --host 127.0.0.1 --port 8000
-```
+Connect the GitHub repository yourself after this pull request is merged to `main`:
+
+1. Sign in at [dashboard.render.com](https://dashboard.render.com).
+2. Click **New +**, then **Blueprint**.
+3. Connect GitHub if Render asks, and choose **utkarsh777-wins/TransitPulse**.
+4. Select branch **main**.
+5. On the Blueprint preview, confirm the web service from `render.yaml`:
+   - Runtime: **Python**, `PYTHON_VERSION` **3.11.18**
+   - Plan: **Free**
+   - Build command: `pip install -r requirements.txt`
+   - Start command: `uvicorn src.app:app --host 0.0.0.0 --port $PORT`
+   - Health check path: `/api/health`
+6. Click **Apply**. Do not add a database, Redis, or a paid instance. Leave `PORT` unset so Render can assign it.
+7. Wait until the deploy is **Live**.
+8. Open the service URL. `/` is the dashboard. `/api/health` returns `"status": "ok"` and `"models_loaded": true`.
+
+If the name `transitpulse` is already taken on the account, rename it in the preview. The `onrender.com` hostname has to be unique. To try the branch before merge, select `feat/deploy-ready` in step 4 instead of `main`.
+
+Free instances sleep after a period with no traffic. The first request after sleep can take about a minute; `/api/health` then answers normally.
+
+The same settings, if you create a web service by hand instead of a Blueprint:
+
+1. **New +** → **Web Service**, repository **utkarsh777-wins/TransitPulse**, branch **main**.
+2. Language **Python**. Build command: `pip install -r requirements.txt`.
+3. Start command: `uvicorn src.app:app --host 0.0.0.0 --port $PORT`.
+4. Instance type **Free**.
+5. Environment: `PYTHON_VERSION` = `3.11.18`. Do not set `PORT`.
+6. Advanced → Health Check Path: `/api/health`.
+7. **Create Web Service**.
+
+## Assumptions
+
+- The GPS table is synthetic data from `notebooks/01_phase1_data_pipeline.ipynb`, not a live operator feed.
+- Generation uses NumPy seed 42. The estimators in `src/export_artifacts.py` use `random_state=42`.
+- The corridor is six stops on NH-44 between Jalandhar and Phagwara: Jalandhar Bus Stand, PAP Chowk, Rama Mandi, Haveli Corridor, LPU Main Gate, and Phagwara Bus Stand.
+- Peak hours are weekdays 08:00–10:00 and 17:00–19:00. The live service flags those same clock hours. Notebook 01 also marks weekend 16:00–19:00 as peak inside the synthetic table.
 
 ## What The App Does
 
@@ -58,7 +119,7 @@ venv\Scripts\python.exe -m uvicorn --app-dir src app:app --host 127.0.0.1 --port
 | `GET` | `/api/corridor` | Six stops, five segments, distances, scheduled times, peak windows |
 | `POST` | `/api/simulate` | Runs live inference across all five segments |
 | `GET` | `/api/diagnostics` | Model metadata, data-quality audit, verification, plots, runtime |
-| `GET` | `/` | Static dashboard from `web/` |
+| `GET` | `/` | Static dashboard from `web/`. The page calls `/api/*` with root-relative URLs, so the same build works on any host. If the API cannot be reached, the page keeps an in-browser stand-in and labels it **Stand-in fallback** (a heuristic, not the trained model). |
 | `GET` | `/assets/*` | Diagnostic assets from `assets/` |
 
 Example simulation request:
@@ -135,8 +196,8 @@ The map swaps tiles with the theme. Light mode requests CARTO Positron and dark 
 ## Project Structure
 
 ```text
-transit-delay-predictor/
-├── assets/                      Diagnostic plot and dashboard captures
+TransitPulse/
+├── assets/                      Diagnostic plots and dashboard captures
 ├── data/
 │   ├── raw/                     Raw GPS telemetry
 │   └── processed/               Clean model-ready dataset
@@ -145,13 +206,20 @@ transit-delay-predictor/
 ├── src/
 │   ├── app.py                   FastAPI backend, interval math, inference, status rules
 │   └── export_artifacts.py      Artifact verification, audit generation, Phase 2 plot
+├── tests/
+│   └── test_smoke.py            Import and API smoke tests
 ├── web/
-│   ├── index.html               Light/dark command-center layout and lightbox markup
-│   ├── styles.css               Theme tokens, responsive styling, 100%/115% zoom
-│   └── app.js                   Leaflet map, theme/tiles, auto-follow, XAI, evaluator UI
-├── requirements.txt
-├── run.ps1                      One-command launcher
-└── TASKS.md                     Build checklist
+│   ├── index.html               Dashboard layout
+│   ├── styles.css               Theme tokens and responsive layout
+│   ├── app.js                   Map, inference UI, stand-in fallback
+│   └── standin.js               In-browser heuristic used only when the API is unreachable
+├── .github/workflows/ci.yml     Install plus pytest smoke test
+├── .python-version              Python 3.11.18
+├── render.yaml                  Render free web service
+├── requirements.txt             Pinned runtime dependencies
+├── requirements-dev.txt         pytest and httpx
+├── requirements-notebooks.txt   Notebook extra (seaborn)
+└── run.ps1                      Windows launcher
 ```
 
 ## Verification

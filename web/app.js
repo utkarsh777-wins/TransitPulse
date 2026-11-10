@@ -34,7 +34,7 @@ const dom = {
   mapEl: $("map"), mapWrap: $("map-wrap"), mapFallback: $("map-fallback"),
   hudState: $("hud-state"), hudLat: $("hud-lat"), hudLon: $("hud-lon"), hudSpeed: $("hud-speed"), hudNextStop: $("hud-next-stop"),
   hudProgressValue: $("hud-progress-value"), hudProgressBar: $("hud-progress-bar"),
-  toast: $("toast"),
+  toast: $("toast"), standinBanner: $("standin-banner"),
   evalBadge: $("eval-badge"), verdict: $("verification-summary"), retentionTag: $("retention-tag"), metricGrid: $("metric-grid"),
   dqFunnel: $("dq-funnel"), dqGates: $("dq-gates"), featureImportance: $("feature-importance"),
   uncertaintyVisual: $("uncertainty-visual"), uncertaintyNote: $("uncertainty-note"),
@@ -107,27 +107,41 @@ function showToast(message, isError = false) {
   state.toastTimer = window.setTimeout(() => dom.toast.classList.remove("is-visible"), 3200);
 }
 
-/* ---------------------------------------------------------------- API (real backend first, stand-in second) */
+/* ---------------------------------------------------------------- API (real backend first, stand-in second)
+   Paths are root-relative (no scheme or host) so the same page works on any host. */
+function apiPath(url) {
+  if (/^[a-z][a-z0-9+.-]*:/i.test(url) || url.startsWith("//")) {
+    throw new Error("API calls must be relative");
+  }
+  return url.startsWith("/") ? url : `/${url}`;
+}
 async function fetchJson(url, options = {}) {
-  const response = await fetch(url, { headers: { "Content-Type": "application/json" }, ...options });
+  const response = await fetch(apiPath(url), { headers: { "Content-Type": "application/json" }, ...options });
   if (!response.ok) throw new Error(`Request failed (${response.status})`);
   return response.json();
 }
 const FORCE_STANDIN = window.location.protocol === "file:" || params.has("standin");
+function activateStandin() {
+  state.standin = true;
+  if (dom.standinBanner) dom.standinBanner.hidden = false;
+  dom.syncPill.title = "Stand-in fallback: in-browser heuristic, not the trained model.";
+  dom.footerMode.textContent = "Stand-in fallback · in-browser heuristic, not the trained model";
+}
 async function api(url, options = {}) {
+  const path = apiPath(url);
   if (!FORCE_STANDIN && !state.standin) {
-    try { return await fetchJson(url, options); }
+    try { return await fetchJson(path, options); }
     catch (error) { if (!window.TPStandIn) throw error; }
   }
   if (!window.TPStandIn) throw new Error("No backend and no stand-in");
-  state.standin = true;
+  activateStandin();
   const S = window.TPStandIn;
-  if (url.startsWith("/api/corridor")) return S.corridor();
-  if (url.startsWith("/api/simulate")) return S.simulate(JSON.parse(options.body || "{}"));
-  if (url.startsWith("/api/diagnostics")) return S.diagnostics();
-  throw new Error(`Stand-in has no route for ${url}`);
+  if (path.startsWith("/api/corridor")) return S.corridor();
+  if (path.startsWith("/api/simulate")) return S.simulate(JSON.parse(options.body || "{}"));
+  if (path.startsWith("/api/diagnostics")) return S.diagnostics();
+  throw new Error(`Stand-in has no route for ${path}`);
 }
-const okLabel = () => (state.standin ? "Stand-in model" : "Model link active");
+const okLabel = () => (state.standin ? "Stand-in fallback" : "Model link active");
 
 /* ---------------------------------------------------------------- theme */
 function currentTheme() { return document.documentElement.dataset.theme === "dark" ? "dark" : "light"; }
@@ -727,7 +741,11 @@ function switchView(view) {
   });
   Object.entries(dom.views).forEach(([key, el]) => { el.hidden = key !== view; });
   document.body.dataset.view = view;
-  dom.footerMode.textContent = view === "live" ? "Live simulation · FastAPI + scikit-learn" : "Evaluator audit · frozen artifacts + validation proof";
+  if (state.standin) {
+    dom.footerMode.textContent = "Stand-in fallback · in-browser heuristic, not the trained model";
+  } else {
+    dom.footerMode.textContent = view === "live" ? "Live simulation · FastAPI + scikit-learn" : "Evaluator audit · frozen artifacts + validation proof";
+  }
   setSheet(false);
   if (view === "live" && state.map) window.setTimeout(() => { state.map.invalidateSize(); fitCorridor(); }, 60);
 }
@@ -856,7 +874,7 @@ function renderDiagnostics(data) {
     ["Backend", rt.backend || "FastAPI"], ["Regressor", rt.regressor || "RandomForestRegressor"],
     ["Uncertainty", rt.uncertainty || "Quantile regressors"], ["Features", String(rt.feature_count ?? 12)],
     ["Quality gates", rt.quality_gates_passed ? "Passed" : "Failed"], ["Artifact freeze", rt.artifacts_passed ? "Passed" : "Failed"],
-    ["Service state", state.standin ? "Stand-in" : String(rt.status || "online").replace(/^./, (c) => c.toUpperCase())],
+    ["Service state", state.standin ? "Stand-in fallback (not the trained model)" : String(rt.status || "online").replace(/^./, (c) => c.toUpperCase())],
     ["Generated", new Date(rt.generated_at || Date.now()).toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour12: false }) + " IST"],
   ];
   dom.diagRuntime.innerHTML = items.map(([k, v]) => `<div><dt>${escapeHtml(k)}</dt><dd class="${v === "Passed" ? "is-pass" : ""}">${escapeHtml(v)}</dd></div>`).join("");
