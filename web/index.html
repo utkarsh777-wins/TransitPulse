@@ -156,7 +156,7 @@
           <div class="fact"><b>6 · 5</b><span>stops · segments</span></div>
           <div class="fact"><b>35.5 min</b><span>scheduled run</span></div>
           <div class="fact"><b>12</b><span>model features</span></div>
-          <div class="fact"><b>10–90</b><span>percentile window</span></div>
+          <div class="fact"><b>Likely</b><span>arrival, not a cumulative interval</span></div>
         </div>
       </div>
     </section>
@@ -212,7 +212,7 @@
               </svg>
             </div>
             <h3>The window</h3>
-            <p>TransitPulse covers the likely spread with a 10th–90th percentile band and works back to a leave-by time <span class="src-tag" title="Leave-by = window start − walk time (default 5 min). Returned as leave_by_min by POST /api/simulate.">from /api/simulate</span>.</p>
+            <p>A likely arrival — this stop's 10th–90th delay band shifted by earlier stops' estimated delays, not a calibrated cumulative interval — and a leave-by time <span class="src-tag" title="Leave-by = window start − walk time (default 5 min). Returned as leave_by_min by POST /api/simulate.">from /api/simulate</span>.</p>
           </article>
         </div>
       </div>

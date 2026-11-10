@@ -363,6 +363,14 @@ console.log(JSON.stringify({ lo: view.lo, hi: view.hi, eta: view.eta, row: row.j
     assert "story.scheduledArrival" in demo_js
     assert "hop time" in demo_js
     assert "Likely arrival" in home
+    how = (ROOT / "web" / "how-it-works.html").read_text(encoding="utf-8")
+    landing = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    assert "Riders get the 10th–90th range" not in how
+    assert "not a calibrated cumulative interval" in how
+    assert "10th–90th percentile band" not in landing
+    assert "percentile window" not in landing
+    assert "not a calibrated cumulative interval" in landing
+    assert "80% prediction interval" not in (ROOT / "src" / "app.py").read_text(encoding="utf-8")
     assert "10th–90th minute range" not in demo_html
     assert "not a calibrated cumulative interval" in demo_html.lower() or "Not a calibrated cumulative interval" in demo_html
     assert 'src="js/arrival.js"' in index
