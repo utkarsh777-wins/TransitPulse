@@ -183,7 +183,9 @@ def test_unknown_path_returns_the_not_found_page() -> None:
         response = client.get("/not-on-this-route")
         assert response.status_code == 404
         assert "Page not found" in response.text
-        assert "This stop" in response.text
+        assert "wishful" not in response.text
+        assert "clean URLs" not in response.text
+        assert "Live demo" not in response.text
         assert 'href="/vendor/fonts/fonts.css"' in response.text
 
 
@@ -235,6 +237,11 @@ def test_evidence_hashes_match_committed_files() -> None:
         assert body["ablation"]["dropped_feature"] == "gps_speed_kmh"
         assert body["metrics"]["reg_mae"] == 0.627
         assert body["metrics"]["reg_r2"] == 0.945
+        lag = body["ablation"]["lag_ablation"]
+        assert lag["dropped_feature"] == "rolling_3trip_delay_min"
+        assert lag["seed"] == 42
+        assert lag["metrics"]["reg_mae"] == 0.738
+        assert lag["metrics"]["reg_r2"] == 0.926
 
 
 def test_rider_pages_do_not_treat_the_band_as_85_percent() -> None:
@@ -385,7 +392,7 @@ console.log(JSON.stringify({ lo: view.lo, hi: view.hi, eta: view.eta, row: row.j
     assert "range_low_min" not in demo_js
     assert "story.scheduledArrival" in demo_js
     assert "hop time" in demo_js
-    assert "Likely arrival" in home
+    assert "Likely arrival" in index
     assert "Leave in " not in home
     assert "min walk used for leave-by" not in demo_js
     assert "walk used for leave-by" in demo_js
@@ -413,3 +420,99 @@ console.log(JSON.stringify({ lo: view.lo, hi: view.hi, eta: view.eta, row: row.j
     assert evidence["ablation"]["n_train"] == 3750
     assert evidence["ablation"]["n_test"] == 945
     assert evidence["interval_coverage"]["n_test"] == 945
+    assert evidence["ablation"]["lag_ablation"]["metrics"]["reg_mae"] == 0.738
+
+
+def test_teacher_prompt_gap_copy() -> None:
+    """B1–B3 and B7–B9: rounded figures, honest window name, rider stack, no live wording."""
+    pages = {
+        name: (ROOT / "web" / name).read_text(encoding="utf-8")
+        for name in ("index.html", "demo.html", "how-it-works.html", "model.html", "about.html", "404.html")
+    }
+    for name, text in pages.items():
+        assert "Live demo" not in text, name
+        assert "Open live demo" not in text, name
+        assert "live demo" not in text.lower(), name
+        assert "wishful" not in text, name
+        assert "Calibrated window" not in text, name
+    how = pages["how-it-works.html"]
+    assert "Arrival window" in how
+    assert "1.1 min" in how and "3.5 min" in how and ">98%</dd>" in how
+    for raw in ("1.095", "3.491", "97.81", "calibrated arrival"):
+        assert raw not in how
+    assert "not a calibrated cumulative interval" in how
+    assert "window start" not in how.lower()
+    assert "point arrival" in how
+    demo = pages["demo.html"]
+    assert 'class="kpis area-kpis" role="region" aria-label="Corridor summary"' in demo
+    assert "NH-44 evaluator audit · TransitPulse" in demo
+    assert 'id="scenario-clock"' in demo
+    assert "live-clock" not in demo
+    assert "seed 42" in demo
+    assert "GPS dropouts" in demo
+    assert "festival or holiday traffic" in demo
+    assert "not an 80% or 85% guarantee" in demo
+    assert "not measured" in demo
+    assert "status-badge" in demo and 'id="leave-line"' in demo and 'id="driver-badges"' in demo
+    home = pages["index.html"]
+    assert "ops-callout" in home and "ops-drivers" in home and "ops-status" in home and "Likely arrival" in home
+    assert "Built for the buses Punjab actually rides." not in pages["about.html"]
+    app = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+    assert "startClock" not in app
+    assert "setInterval" not in app
+    assert "NH-44 evaluator audit · TransitPulse" in app
+    assert "lagAblationPhrase" in app
+    rider = (ROOT / "web" / "js" / "rider-home.js").read_text(encoding="utf-8")
+    assert "ops-band" in rider
+    assert "Leave in " not in rider
+
+
+def test_review_fixes_readme_badges_and_about() -> None:
+    """README matches the committed lag ablation, zero badges stay hidden, about drops the live claim."""
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "No ablation drops `rolling_3trip_delay_min`" not in readme
+    assert "That check is not measured" not in readme
+    assert "the evaluator page says so" not in readme
+    assert "the GPS-speed ablation, and artifact hashes" not in readme
+    assert "GPS-speed ablation and interval coverage" not in readme
+    assert "MAE 0.738 min and R² 0.926" in readme
+    assert "MAE 0.819 min and R² 0.903" in readme
+    assert "n_jobs` 1" in readme
+    assert "upstream-lag ablations" in readme
+    about = (ROOT / "web" / "about.html").read_text(encoding="utf-8")
+    assert "live corridor dashboard" not in about
+    assert "FastAPI backend and corridor rider view" in about
+    assert "Read live pings from AIS-140" in about
+    assert "Re-measure window coverage on live trips" in about
+    home = (ROOT / "web" / "js" / "rider-home.js").read_text(encoding="utf-8")
+    demo = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+    assert "driverBadgeText(" in home
+    assert "driverBadgeText(" in demo
+    script = r"""
+const api = require("./web/js/arrival.js");
+const cases = [
+  [0, ""],
+  [0.0, ""],
+  [0.04, ""],
+  [-0.04, ""],
+  [0.14, "+0.1 min"],
+  [2.47, "+2.5 min"],
+  [0.61, "+0.6 min"],
+  [-0.16, "-0.2 min"],
+];
+for (const [minutes, expected] of cases) {
+  const got = api.driverBadgeText(minutes);
+  if (got !== expected) {
+    console.error(JSON.stringify({ minutes, got, expected }));
+    process.exit(2);
+  }
+}
+"""
+    proc = subprocess.run(
+        ["node", "-e", script],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr + proc.stdout

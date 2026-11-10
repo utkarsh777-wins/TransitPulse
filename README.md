@@ -25,7 +25,7 @@ Unknown page paths return `web/404.html` with status 404. Unknown `/api/*` paths
 | `GET` | `/api/health` | `{"status": "ok", "service": "TransitPulse AI", ...}` after the models load |
 | `GET` | `/api/corridor` | Six stops, five segments, 21.2 km, 35.5 scheduled minutes, bus `PB08-BUS-101` |
 | `POST` | `/api/simulate` | Inference for every segment. `walk_time_min` defaults to 5 (allowed 0–30). Each segment's `leave_by_min` is the cumulative scheduled arrival plus predicted delay through that stop, minus the walk |
-| `GET` | `/api/evidence` | Metrics, interval coverage, the GPS-speed ablation, and artifact hashes |
+| `GET` | `/api/evidence` | Metrics, interval coverage, the GPS-speed and upstream-lag ablations, and artifact hashes |
 | `GET` | `/api/diagnostics` | Model metadata, the data-quality audit, plots, and runtime status |
 
 Public status follows the point delay: under 2.0 min is On-Time, 2.0–6.0 min is Moderate Delay, above 6.0 min is Severe Delay.
@@ -49,7 +49,7 @@ Held-out regressor metrics in `models/model_metadata.json`: MAE 0.627 min, RMSE 
 
 The published interval is centred on the point delay. Half-width is `max(0.6, (upper − lower) / 2)`, multiplied by 1.35 at peak, and the lower bound is floored at −1.0 minute. Mean raw interval width is 1.095 min off-peak and 3.491 min at peak. On the 945 test rows, 0.8698 of actual delays fall inside that published interval (0.8916 of 332 peak rows, 0.8581 of 613 off-peak rows).
 
-`src/ablation.py` retrains only the regressor with the same split and seed, dropping `gps_speed_kmh`. `models/ablation.json` records MAE 0.819 min and R² 0.903. The shipped regressor is not replaced. No ablation drops `rolling_3trip_delay_min`. That check is not measured, and the evaluator page says so. The 10th–90th band is not an 80% or 85% coverage guarantee. Observed coverage is the separate held-out figure above.
+`src/ablation.py` retrains only the regressor with the same split and seed. Dropping `gps_speed_kmh` records MAE 0.819 min and R² 0.903. Dropping `rolling_3trip_delay_min` records MAE 0.738 min and R² 0.926 in `models/ablation.json` under `lag_ablation` (days 1–24 / 25–30, seed 42, 100 trees, depth 12, `n_jobs` 1). The shipped regressor is not replaced. The 10th–90th band is not an 80% or 85% coverage guarantee. Observed coverage is the separate held-out figure above.
 
 Cleaning (`models/dq_audit_report.json`): 4,800 raw pings, 57 outside the corridor box, 48 outside 2–95 km/h, 48 dwell values imputed, 0 duplicate trip/segment rows, 4,695 clean rows (97.81% kept).
 
@@ -145,7 +145,7 @@ TransitPulse/
 ├── src/
 │   ├── app.py                 API, pages, inference
 │   ├── peak.py                Shared peak-hour rule
-│   ├── ablation.py            GPS-speed ablation and interval coverage
+│   ├── ablation.py            GPS-speed and upstream-lag ablations, plus interval coverage
 │   └── export_artifacts.py    Train or verify artifacts and the phase 2 plot
 ├── tests/test_smoke.py
 ├── web/                       Five pages, demo, 404, CSS, JS, vendored fonts and Leaflet

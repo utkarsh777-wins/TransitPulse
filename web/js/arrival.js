@@ -7,6 +7,7 @@
   root.formatMinutes = api.formatMinutes;
   root.csvCell = api.csvCell;
   root.createRequestGate = api.createRequestGate;
+  root.driverBadgeText = api.driverBadgeText;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
@@ -41,6 +42,13 @@
     return text;
   }
 
+  /* Empty when the one-decimal badge would read 0.0. A zero is not a reason. */
+  function driverBadgeText(minutes) {
+    var shown = Number(Number(minutes).toFixed(1));
+    if (!Number.isFinite(shown) || shown === 0) return "";
+    return (shown > 0 ? "+" : "") + shown.toFixed(1) + " min";
+  }
+
   function createRequestGate() {
     var seq = 0;
     return {
@@ -60,5 +68,6 @@
     formatMinutes: formatMinutes,
     csvCell: csvCell,
     createRequestGate: createRequestGate,
+    driverBadgeText: driverBadgeText,
   };
 });

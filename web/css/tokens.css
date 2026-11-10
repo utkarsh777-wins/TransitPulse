@@ -8,8 +8,7 @@
 
 /* ---------- 1. Tokens ------------------------------------------------ */
 :root {
-  /* brand (from the Departures logo system) */
-  --vermilion: #FF5A1F;
+  /* Ink for chrome. Warning colour is --moderate, not a brand orange. */
   --ink: #111214;
   --night: #0F1012;
 
@@ -53,9 +52,9 @@
   --fg: #111214;
   --fg-2: #45474D;
   --fg-3: #64666C;
-  --accent: #FF5A1F;
-  --on-accent: #111214;
-  --accent-text: #B83A0B;
+  --accent: #111214;
+  --on-accent: #FCFBF8;
+  --accent-text: #111214;
   --ontime: #16773A;  --ontime-bg: #E4EFE6;
   --moderate: #8A5A00; --moderate-bg: #F4EAD3;
   --severe: #C4202B;  --severe-bg: #F7E1DF;
@@ -84,9 +83,9 @@
   --fg: #EEEEF0;
   --fg-2: #B2B4BB;
   --fg-3: #8E9199;
-  --accent: #FF5A1F;
+  --accent: #EEEEF0;
   --on-accent: #111214;
-  --accent-text: #FF7A45;
+  --accent-text: #EEEEF0;
   --ontime: #3FB950;  --ontime-bg: #15271B;
   --moderate: #E0A526; --moderate-bg: #2B2312;
   --severe: #FF6A5C;  --severe-bg: #331A18;
@@ -122,13 +121,13 @@
   --grid-gap: 16px; /* 16 / 24 / 32 */
   /* radii: 4 / 8 / 12 / 16 / 24 / full. Nested rule: inner radius = outer − padding. */
   --r-xs: 4px; --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 24px; --r-full: 999px;
-  --accent-hover: #FF6E3A;
+  --accent-hover: #2A2C31;
   --dur-menu-in: 200ms; --dur-menu-out: 150ms; --dur-theme: 160ms;
 }
 /* Surface tiers (max 3): --bg · --surface (cards) · --surface-2 (= --band: alternating sections and wells).
    --surface-3 is reserved for bar/track backgrounds. Dark --band ΔL* = +3.6 over --bg (was +1.7). */
-[data-theme="light"], :root { --band: #ECE9E2; --surface-2: #ECE9E2; --diagram: #45474D; --diagram-soft: #CBC6BB; --focus: #B83A0B; --scrim: rgba(17, 18, 20, .40); }
-[data-theme="dark"] { --band: #17181C; --surface-2: #1D1E22; --diagram: #B2B4BB; --diagram-soft: #3A3D44; --focus: #FF7A45; --scrim: rgba(0, 0, 0, .62); }
+[data-theme="light"], :root { --band: #ECE9E2; --surface-2: #ECE9E2; --diagram: #45474D; --diagram-soft: #CBC6BB; --focus: #111214; --scrim: rgba(17, 18, 20, .40); }
+[data-theme="dark"] { --band: #17181C; --surface-2: #1D1E22; --diagram: #B2B4BB; --diagram-soft: #3A3D44; --focus: #EEEEF0; --accent-hover: #D5D6DB; --scrim: rgba(0, 0, 0, .62); }
 
 /* Stepped spacing (r2): replaces vw clamps, which rendered off-scale values (e.g. 146.4, 86.4, 28.8 px at 1440).
    --fl-A-B = A below 600 px, the 4 px-rounded midpoint at 600–1199, B from 1200. */

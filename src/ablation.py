@@ -123,18 +123,45 @@ def measure_coverage(test: pd.DataFrame) -> dict:
     }
 
 
-def train_ablation(train: pd.DataFrame, test: pd.DataFrame, full_metrics: dict) -> dict:
-    features = [name for name in FEATURES if name != DROPPED_FEATURE]
-    regressor = RandomForestRegressor(n_estimators=100, max_depth=12, random_state=SEED, n_jobs=-1)
+LAG_FEATURE = "rolling_3trip_delay_min"
+
+
+def train_ablation(
+    train: pd.DataFrame,
+    test: pd.DataFrame,
+    full_metrics: dict,
+    dropped_feature: str = DROPPED_FEATURE,
+) -> dict:
+    features = [name for name in FEATURES if name != dropped_feature]
+    # The committed GPS-speed ablation used n_jobs=-1. The lag ablation uses n_jobs=1
+    # so a later run of this same function reproduces the recorded MAE and R².
+    n_jobs = 1 if dropped_feature == LAG_FEATURE else -1
+    regressor = RandomForestRegressor(n_estimators=100, max_depth=12, random_state=SEED, n_jobs=n_jobs)
     regressor.fit(train[features], train["delay_minutes"])
     predicted = regressor.predict(test[features])
     actual = test["delay_minutes"]
+    if dropped_feature == LAG_FEATURE:
+        note = (
+            "Same split, seed, and regressor hyperparameters as the shipped model, "
+            "with rolling_3trip_delay_min removed. That feature is the largest importance "
+            "and can carry information about the delay itself. "
+            "n_jobs is 1 so this score can be reproduced. "
+            "Scores are on synthetic held-out days, not real-world accuracy."
+        )
+        hyperparameters = {"n_estimators": 100, "max_depth": 12, "random_state": SEED, "n_jobs": 1}
+    else:
+        note = (
+            "Same split and seed as the shipped regressor, with gps_speed_kmh removed. "
+            "gps_speed_kmh can leak the target because a slower ping is partly the delay itself. "
+            "Scores are on synthetic held-out days, not real-world accuracy."
+        )
+        hyperparameters = {"n_estimators": 100, "max_depth": 12, "random_state": SEED}
     return {
-        "dropped_feature": DROPPED_FEATURE,
+        "dropped_feature": dropped_feature,
         "seed": SEED,
         "split": {"train_days": "1-24", "test_days": "25-30"},
         "estimator": "RandomForestRegressor",
-        "hyperparameters": {"n_estimators": 100, "max_depth": 12, "random_state": SEED},
+        "hyperparameters": hyperparameters,
         "features": features,
         "n_train": int(len(train)),
         "n_test": int(len(test)),
@@ -151,11 +178,7 @@ def train_ablation(train: pd.DataFrame, test: pd.DataFrame, full_metrics: dict) 
             "seed": SEED,
             "synthetic": True,
         },
-        "note": (
-            "Same split and seed as the shipped regressor, with gps_speed_kmh removed. "
-            "gps_speed_kmh can leak the target because a slower ping is partly the delay itself. "
-            "Scores are on synthetic held-out days, not real-world accuracy."
-        ),
+        "note": note,
     }
 
 
@@ -168,7 +191,27 @@ def refresh_metadata_hash(audit: dict) -> None:
             item["sha256"] = file_sha256(path)
 
 
+def write_lag_ablation() -> dict:
+    """Measure the upstream-lag ablation and store it beside the GPS-speed result.
+
+    Does not retrain the GPS-speed ablation and does not rewrite model metadata.
+    """
+    if not CLEAN_DATA_PATH.is_file():
+        raise FileNotFoundError(CLEAN_DATA_PATH)
+    train, test = load_split()
+    metadata = json.loads(METADATA_PATH.read_text(encoding="utf-8"))
+    lag = train_ablation(train, test, metadata.get("metrics", {}), dropped_feature=LAG_FEATURE)
+    existing = json.loads(ABLATION_PATH.read_text(encoding="utf-8")) if ABLATION_PATH.is_file() else {}
+    existing["lag_ablation"] = lag
+    ABLATION_PATH.write_text(json.dumps(existing, indent=2) + "\n", encoding="utf-8")
+    print(f"lag ablation MAE {lag['metrics']['reg_mae']}  R2 {lag['metrics']['reg_r2']}")
+    return lag
+
+
 def main() -> int:
+    if "--lag-only" in sys.argv:
+        write_lag_ablation()
+        return 0
     if not CLEAN_DATA_PATH.is_file():
         raise FileNotFoundError(CLEAN_DATA_PATH)
     train, test = load_split()
@@ -176,6 +219,10 @@ def main() -> int:
     ablation = train_ablation(train, test, metadata.get("metrics", {}))
     coverage = measure_coverage(test)
 
+    if ABLATION_PATH.is_file():
+        previous = json.loads(ABLATION_PATH.read_text(encoding="utf-8"))
+        if isinstance(previous, dict) and "lag_ablation" in previous:
+            ablation["lag_ablation"] = previous["lag_ablation"]
     ABLATION_PATH.write_text(json.dumps(ablation, indent=2) + "\n", encoding="utf-8")
 
     metadata["interval_coverage"] = coverage

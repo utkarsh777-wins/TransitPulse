@@ -9,7 +9,7 @@ const SHOT = params.has("shot");
 if (SHOT) document.documentElement.classList.add("is-shot");
 
 const dom = {
-  clock: $("live-clock"), syncPill: $("sync-pill"), syncLabel: $("sync-label"),
+  clock: $("scenario-clock"), syncPill: $("sync-pill"), syncLabel: $("sync-label"),
   views: { live: $("view-live"), evaluator: $("view-evaluator") },
   tabs: Array.from(document.querySelectorAll(".view-tab")),
   footerMode: $("footer-mode"), themeToggle: $("theme-toggle"),
@@ -18,7 +18,7 @@ const dom = {
   statEta: $("stat-eta"), statEtaFoot: $("stat-eta-foot"),
   statStatus: $("stat-status"), statStatusDot: $("stat-status-dot"), statStatusFoot: $("stat-status-foot"),
   countOnTime: $("count-on-time"), countModerate: $("count-moderate"), countSevere: $("count-severe"),
-  etaCard: $("eta-card"), peakAlert: $("peak-alert"), etaTitle: $("eta-title"), confidenceBadge: $("confidence-badge"),
+  etaCard: $("eta-card"), peakAlert: $("peak-alert"), etaTitle: $("eta-title"), driverBadges: $("driver-badges"), leaveLine: $("leave-line"),
   etaKicker: $("eta-kicker"), etaValue: $("eta-value"), etaStatus: $("eta-status"), etaMeta: $("eta-meta"),
   etaRange: $("eta-range"), etaRangeValue: $("eta-range-value"), rangeBar: $("range-bar"), rangeSched: $("range-sched"), rangeMax: $("range-max"),
   recommendation: $("recommendation"), etaSegmentName: $("eta-segment-name"), etaClassifier: $("eta-classifier"), etaWindow: $("eta-window"), etaLeave: $("eta-leave"),
@@ -231,12 +231,13 @@ function flip(cell, ch) {
   window.setTimeout(() => cell.classList.remove("is-flipping"), 280);
 }
 
-/* ---------------------------------------------------------------- clock */
-function startClock() {
-  const formatter = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
-  const tick = () => { dom.clock.textContent = formatter.format(new Date()); };
-  tick();
-  window.setInterval(tick, 1000);
+/* Scenario hour, not a ticking clock. A running IST clock read as a live GPS feed. */
+function renderScenarioClock() {
+  if (!dom.clock) return;
+  const hour = Number(state.simulation.hour_of_day);
+  const label = `${String(hour).padStart(2, "0")}:00 IST`;
+  dom.clock.textContent = label;
+  dom.clock.dateTime = `${String(hour).padStart(2, "0")}:00`;
 }
 
 /* ---------------------------------------------------------------- controls */
@@ -257,6 +258,7 @@ function updateControlLabels() {
   dom.dwellValue.textContent = String(Math.round(s.prev_stop_dwell_sec));
   dom.speedValue.textContent = String(Math.round(s.gps_speed_kmh));
   if (dom.walkValue) dom.walkValue.textContent = String(Math.round(s.walk_time_min ?? 5));
+  renderScenarioClock();
   const preset = state.activePreset ? PRESET_LABELS[state.activePreset] : "Custom";
   dom.sheetSummary.textContent = `${preset} · ${String(hour).padStart(2, "0")}:00`;
 }
@@ -336,19 +338,21 @@ function etaStory(segment) {
   };
 }
 
+function leaveLineFor(segment) {
+  const leave = Number(segment.leave_by_min);
+  return leave > 0.05 ? `Leave in ${leave.toFixed(1)} min` : "Leave now";
+}
 function recommendationFor(segment) {
   if (!segment || !state.result) return "Select a stop.";
   const weather = state.result.simulation.weather_severity;
-  const leave = Number(segment.leave_by_min);
   const walk = Number(state.simulation.walk_time_min ?? 5);
-  const when = leave > 0.05 ? `Leave in ${leave.toFixed(1)} min` : "Leave now";
   const walkMin = Math.round(walk);
   const article = walkMin === 8 || walkMin === 11 || walkMin === 18 ? "an" : "a";
-  const walkBit = ` for ${article} ${walkMin} min walk`;
-  if (segment.delay_status === "Severe Delay") return `${when}${walkBit}. This stop is running severely late.`;
-  if (segment.delay_status === "Moderate Delay") return `${when}${walkBit}. This stop is late.`;
-  if (segment.is_low_confidence || weather > 0) return `${when}${walkBit}. The arrival range is wide, so do not treat one minute as exact.`;
-  return `${when}${walkBit}. This stop is close to the schedule.`;
+  const walkBit = `For ${article} ${walkMin} min walk`;
+  if (segment.delay_status === "Severe Delay") return `${walkBit}. This stop is running severely late.`;
+  if (segment.delay_status === "Moderate Delay") return `${walkBit}. This stop is late.`;
+  if (segment.is_low_confidence || weather > 0) return `${walkBit}. The arrival range is wide, so do not treat one minute as exact.`;
+  return `${walkBit}. This stop is close to the schedule.`;
 }
 
 /* ---------------------------------------------------------------- renderers */
@@ -377,19 +381,17 @@ function renderRiderCard() {
   if (!segment || !state.result) return;
   const story = etaStory(segment);
   const confidence = Number(segment.confidence_pct);
-  const badgeClass = confidence >= 70 ? "is-high" : confidence >= 55 ? "is-low" : "is-critical";
   const cls = statusClass(segment.delay_status);
 
   dom.peakAlert.hidden = !story.low;
   dom.peakAlert.classList.toggle("is-critical", story.low && (confidence < 55 || segment.delay_status === "Severe Delay"));
   dom.etaTitle.textContent = segment.end_stop;
-  dom.confidenceBadge.className = `badge ${badgeClass}`;
-  dom.confidenceBadge.textContent = statusText(segment.delay_status);
+  dom.etaStatus.className = `status-badge ${cls}`;
+  dom.etaStatus.dataset.status = cls;
+  dom.etaStatus.textContent = statusText(segment.delay_status);
 
   dom.etaKicker.textContent = "Arrives in";
   setFlap(dom.etaValue, story.flap);
-  dom.etaStatus.className = `status-chip ${cls}`;
-  dom.etaStatus.textContent = statusText(segment.delay_status);
   dom.etaMeta.innerHTML = `<b>${signed(story.delay)} min</b> vs schedule · scheduled <b>${minutes1(story.scheduledArrival).toFixed(1)}</b> min · hop time <b>${minutes1(story.hop).toFixed(1)}</b> min`;
 
   dom.etaRange.hidden = false;
@@ -398,15 +400,39 @@ function renderRiderCard() {
     dom.etaRangeValue.textContent = `${minutes1(story.lo).toFixed(1)}–${minutes1(story.hi).toFixed(1)} min`;
     dom.rangeBar.style.left = `${(story.lo / max) * 100}%`;
     dom.rangeBar.style.width = `${((story.hi - story.lo) / max) * 100}%`;
-    dom.rangeBar.style.background = `var(--${cls === "ontime" ? "moderate" : cls})`;
+    dom.rangeBar.className = `window-band is-${cls}`;
+    dom.rangeBar.style.background = "";
     const schedPct = Math.min(100, Math.max(0, (story.scheduledArrival / max) * 100));
     dom.rangeSched.style.left = `calc(${schedPct}% - 1px)`;
     dom.rangeSched.title = `Scheduled arrival ${minutes1(story.scheduledArrival).toFixed(1)} min`;
     dom.rangeMax.textContent = `${max} min`;
   }
+  if (dom.leaveLine) dom.leaveLine.textContent = leaveLineFor(segment);
   dom.recommendation.textContent = recommendationFor(segment);
+  renderDriverBadges(segment);
   dom.etaSegmentName.textContent = routeName(segment.name);
   dom.etaClassifier.textContent = statusText(segment.delay_status);
+}
+
+function renderDriverBadges(segment) {
+  const list = dom.driverBadges;
+  if (!list || !segment) return;
+  const byKey = {};
+  (segment.xai_drivers || []).forEach((d) => { byKey[d.key] = d; });
+  list.replaceChildren();
+  ["rolling_lag", "peak_hour", "weather", "dwell"].forEach((key) => {
+    const driver = byKey[key];
+    if (!driver) return;
+    const text = driverBadgeText(driver.minutes);
+    if (!text) return;
+    const li = document.createElement("li");
+    const name = document.createElement("span");
+    name.textContent = DRIVER_NAMES[key] || driver.label;
+    const mins = document.createElement("b");
+    mins.textContent = text;
+    li.append(name, mins);
+    list.appendChild(li);
+  });
 }
 
 function renderXai() {
@@ -844,6 +870,9 @@ function switchView(view) {
   });
   Object.entries(dom.views).forEach(([key, el]) => { el.hidden = key !== view; });
   document.body.dataset.view = view;
+  document.title = view === "evaluator"
+    ? "NH-44 evaluator audit · TransitPulse"
+    : "NH-44 rider view · TransitPulse";
   if (document.documentElement.dataset.demo === "error") {
     setFooterMode("Corridor service unavailable · nothing on this page is current");
   } else if (state.standin) {
@@ -1027,12 +1056,22 @@ function downloadScenarioCsv() {
   });
   downloadCsv("transitpulse-scenario.csv", rows);
 }
+let evidencePayload = null;
+function lagAblationPhrase(data) {
+  const metrics = data && data.ablation && data.ablation.lag_ablation && data.ablation.lag_ablation.metrics;
+  if (!metrics || metrics.reg_mae == null || metrics.reg_r2 == null) return "Upstream-lag ablation: not measured.";
+  return `Upstream-lag ablation MAE ${fixed(metrics.reg_mae, 1)} min, R² ${fixed(metrics.reg_r2, 2)}.`;
+}
 function downloadEvidenceCsv() {
   const line = document.getElementById("coverage-line");
+  const lag = evidencePayload && evidencePayload.ablation && evidencePayload.ablation.lag_ablation;
+  const lagValue = lag && lag.metrics
+    ? `${fixed(lag.metrics.reg_mae, 3)} MAE, R2 ${fixed(lag.metrics.reg_r2, 3)}`
+    : "not measured";
   const rows = [
     ["item", "value", "source"],
     ["note", line ? line.textContent : "unavailable", "/api/evidence"],
-    ["upstream_lag_ablation", "not measured", "not run"],
+    ["upstream_lag_ablation", lagValue, lag ? "models/ablation.json lag_ablation" : "not run"],
   ];
   (state.diagnostics?.artifacts || []).forEach((item) => {
     rows.push([item.file, item.sha256, "models/ SHA-256 from the audit"]);
@@ -1044,15 +1083,16 @@ async function fillCoverageLine() {
   if (!line) return;
   try {
     const data = await api("/api/evidence");
+    evidencePayload = data;
     const coverage = data.interval_coverage || {};
     const metrics = (data.ablation && data.ablation.metrics) || {};
     const pct = (value) => (Number(value) * 100).toFixed(1);
     fillSplitCounts(data);
     if (!coverage.overall && coverage.overall !== 0) {
-      line.textContent = "Observed coverage: unavailable. Upstream-lag ablation: not measured.";
+      line.textContent = `Observed coverage: unavailable. ${lagAblationPhrase(data)}`;
       return;
     }
-    line.textContent = `Observed coverage on days ${coverage.test_days}: ${pct(coverage.overall)}% of ${coverage.n_test} rows (peak ${pct(coverage.peak)}%, off-peak ${pct(coverage.off_peak)}%). GPS-speed ablation MAE ${fixed(metrics.reg_mae, 1)} min, R² ${fixed(metrics.reg_r2, 2)}. Upstream-lag ablation: not measured.`;
+    line.textContent = `Observed coverage on days ${coverage.test_days}: ${pct(coverage.overall)}% of ${coverage.n_test} rows (peak ${pct(coverage.peak)}%, off-peak ${pct(coverage.off_peak)}%). GPS-speed ablation MAE ${fixed(metrics.reg_mae, 1)} min, R² ${fixed(metrics.reg_r2, 2)}. ${lagAblationPhrase(data)}`;
   } catch (error) {
     line.textContent = "Observed coverage: unavailable. Upstream-lag ablation: not measured.";
     fillSplitCounts(null);
@@ -1186,10 +1226,10 @@ async function init() {
   setSheet(false); syncSheetPeek();
   const skeletonTimer = window.setTimeout(() => { if (document.documentElement.dataset.demo === "loading") setDemoState("skeleton"); }, 300);
   bindConnectivity();
-  if (FORCED_STATE === "loading") { window.clearTimeout(skeletonTimer); setDemoState("skeleton"); bindTheme(); startClock(); return; }
-  if (FORCED_STATE === "error") { window.clearTimeout(skeletonTimer); bindTheme(); startClock(); setDemoState("error"); setSyncState("error", "Corridor offline"); document.documentElement.dataset.ready = "1"; return; }
+  if (FORCED_STATE === "loading") { window.clearTimeout(skeletonTimer); setDemoState("skeleton"); bindTheme(); renderScenarioClock(); return; }
+  if (FORCED_STATE === "error") { window.clearTimeout(skeletonTimer); bindTheme(); renderScenarioClock(); setDemoState("error"); setSyncState("error", "Corridor offline"); document.documentElement.dataset.ready = "1"; return; }
   bindTheme();
-  startClock();
+  renderScenarioClock();
   bindEvents();
   syncControlsFromState();
   dom.playToggle.classList.toggle("is-paused", !state.playing);
