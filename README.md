@@ -1,4 +1,4 @@
-# TransitPulse AI · SIH25013
+# TransitPulse AI
 
 Real-time public transport tracking and delay prediction for the NH-44 corridor between Jalandhar and Phagwara. TransitPulse AI combines a live Leaflet simulation, a FastAPI inference backend, and frozen scikit-learn artifacts to forecast segment delays, classify service status, and expose peak-hour uncertainty to riders and evaluators.
 
@@ -123,7 +123,7 @@ The same settings, if you create a web service by hand instead of a Blueprint:
 | `GET` | `/how-it-works` | Pipeline and interval explanation |
 | `GET` | `/demo` | Live dashboard. Root-relative `/api/*` calls. If the API cannot be reached, the page keeps an in-browser stand-in and labels it **Stand-in fallback** (a heuristic, not the trained model). `?view=evaluator` opens the audit tab. |
 | `GET` | `/model` | Held-out metrics, coverage, and the GPS-speed ablation |
-| `GET` | `/about` | SIH25013, roadmap, and the builder |
+| `GET` | `/about` | Roadmap and the builder |
 | `GET` | `/api/evidence` | Synthetic-data note, interval coverage, ablation MAE/R², artifact hashes |
 | `GET` | `/assets/*` | Diagnostic assets from `assets/` |
 
@@ -219,7 +219,7 @@ TransitPulse/
 │   ├── how-it-works.html        Pipeline explanation
 │   ├── demo.html                Live dashboard (same behaviour, site chrome)
 │   ├── model.html               Metrics, coverage, ablation
-│   ├── about.html               SIH25013, roadmap, builder
+│   ├── about.html               Roadmap and builder
 │   ├── styles.css               Theme tokens and responsive layout
 │   ├── app.js                   Map, inference UI, stand-in fallback
 │   └── standin.js               In-browser heuristic used only when the API is unreachable
