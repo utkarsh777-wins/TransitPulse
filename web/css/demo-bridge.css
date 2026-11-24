@@ -221,6 +221,23 @@ body[data-app] main :is(.kpi-foot, .kpi-value, .field-label output, .mono, .num,
 /* r4: an open phone sheet is modal (app.js setSheetModal): the page behind it doesn't scroll. */
 @media (max-width: 639.98px) { html.sheet-open { overflow: hidden; } }
 
+/* Short phones (320×568): the collapsed controls sheet covered the rider "Leave in" line.
+   One-line peek (title, not the scenario summary) plus tighter space above that line
+   keeps the line above the sheet. Taller phones and every desktop width keep the full peek. */
+@media (max-width: 639.98px) and (max-height: 640px) {
+  .controls-card:not(.is-open) .controls-head { min-height: 0; padding-top: 0; }
+  .controls-card:not(.is-open) .sheet-handle {
+    padding-top: 0;
+    grid-template-areas: "grab grab" "title chev";
+  }
+  .controls-card:not(.is-open) .sheet-summary {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  body[data-app] .eta-card > .card-head { margin-bottom: 8px; }
+  body[data-app] .eta-hero { padding-bottom: 8px; gap: 4px; }
+  body[data-app] .eta-window { margin-bottom: 8px; }
+}
+
 /* r4 · offline, every live element: the rider flap, status chips (rider card + segment list), the
    live-status KPI and its dot, the route colours and the bus all drop to neutral, and the rider card
    and status KPI get an "as of HH:MM:SS IST" stamp. Colour, not opacity, so text stays ≥ 4.5:1. */
