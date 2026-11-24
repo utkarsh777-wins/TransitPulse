@@ -2,6 +2,8 @@
 
 ![TransitPulse home on a desktop. The top card is a scenario for bus PB08-BUS-101 at PAP Chowk on a weekday at 13:00, with leave-by, a likely arrival, and presets for midday, morning rush, and severe congestion.](docs/images/transitpulse-home.png)
 
+Live site: https://transitpulse-z3ia.onrender.com
+
 Honest arrival windows for Punjab's tier-2 and intercity buses. TransitPulse predicts delay on one corridor, NH-44 from Jalandhar to Phagwara, and shows a likely arrival plus a leave-by time. That range is this stop's 10th–90th delay band shifted by earlier stops' estimated delays, not a calibrated cumulative interval. The training table is synthetic GPS from `notebooks/01_phase1_data_pipeline.ipynb` (NumPy seed 42). Held-out scores describe that table. They are not real-world accuracy.
 
 The service is FastAPI (`src/app.py`). It serves the site in `web/` and the JSON API. Models in `models/` are loaded at startup and are not retrained on boot.
