@@ -221,10 +221,12 @@ body[data-app] main :is(.kpi-foot, .kpi-value, .field-label output, .mono, .num,
 /* r4: an open phone sheet is modal (app.js setSheetModal): the page behind it doesn't scroll. */
 @media (max-width: 639.98px) { html.sheet-open { overflow: hidden; } }
 
-/* Short phones (320×568): the collapsed controls sheet covered the rider "Leave in" line.
-   One-line peek (title, not the scenario summary) plus tighter space above that line
-   keeps the line above the sheet. Taller phones and every desktop width keep the full peek. */
+/* Short phones (320×568): the collapsed controls sheet covered the Leave by block.
+   A one-line peek, and page padding equal to that peek, keep the whole block
+   (leave line and walk sentence) above the sheet without scrolling.
+   Taller phones and every desktop width keep the full peek. */
 @media (max-width: 639.98px) and (max-height: 640px) {
+  body[data-app] { --header-h: 56px; }
   .controls-card:not(.is-open) .controls-head { min-height: 0; padding-top: 0; }
   .controls-card:not(.is-open) .sheet-handle {
     padding-top: 0;
@@ -233,9 +235,12 @@ body[data-app] main :is(.kpi-foot, .kpi-value, .field-label output, .mono, .num,
   .controls-card:not(.is-open) .sheet-summary {
     position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
   }
+  body[data-app] .app-bar .topbar-inner { min-height: 0; padding-block: 0; }
+  body[data-app][data-view="live"] .main { padding-top: 0; padding-bottom: var(--sheet-peek); }
+  body[data-app] .eta-card { padding-top: 8px; }
   body[data-app] .eta-card > .card-head { margin-bottom: 8px; }
   body[data-app] .eta-hero { padding-bottom: 8px; gap: 4px; }
-  body[data-app] .eta-window { margin-bottom: 8px; }
+  body[data-app] .eta-window { margin-bottom: 8px; padding-block: 8px; }
 }
 
 /* r4 · offline, every live element: the rider flap, status chips (rider card + segment list), the
