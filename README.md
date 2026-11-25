@@ -126,10 +126,6 @@ Set it under **Settings → Secrets and variables → Actions → Variables**. I
 
 GitHub may start a scheduled run later than the cron time. On a public repository, scheduled workflows are disabled after 60 days with no repository activity.
 
-## Credit
-
-Utkarsh Kumar, Lovely Professional University, course CSE276.
-
 ## Project structure
 
 ```text
