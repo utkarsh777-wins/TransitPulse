@@ -153,3 +153,15 @@ TransitPulse/
 ├── requirements-notebooks.txt seaborn for notebook 01
 └── run.ps1
 ```
+
+## License
+
+TransitPulse is licensed under the Apache License, Version 2.0. See the [LICENSE](LICENSE) file for details.
+
+Copyright © 2026 Utkarsh Kumar.
+
+## Academic Disclaimer
+
+TransitPulse was originally developed as an academic project. It is intended for research, educational, and demonstration purposes and is not an officially deployed public transportation system.
+
+Third-party datasets, libraries, and assets remain subject to their respective licenses.
